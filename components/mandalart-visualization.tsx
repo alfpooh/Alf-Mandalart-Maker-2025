@@ -85,7 +85,8 @@ export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({ 
             row.map((cell, colIndex) => (
               <div
                 key={`${rowIndex}-${colIndex}`}
-                className="w-20 h-20 border border-gray-600 flex items-center justify-center text-sm font-medium text-gray-800 break-words text-center bg-white"
+                className="w-20 h-20 border border-gray-600 flex items-center justify-center font-medium text-gray-800 break-words text-center bg-white"
+                style={{ fontSize: "0.5rem" }}
               >
                 {cell}
               </div>
