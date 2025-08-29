@@ -213,6 +213,33 @@ export default function MandalartApp() {
     })
   }
 
+  // Update functions for the visualization
+  const handleUpdateMainGoal = (content: string) => {
+    setData((prev) => ({
+      ...prev,
+      mainGoal: { ...prev.mainGoal, content },
+    }))
+  }
+
+  const handleUpdateSubgoal = (index: number, content: string) => {
+    setData((prev) => ({
+      ...prev,
+      subgoals: prev.subgoals.map((sg, i) => (i === index ? { ...sg, content } : sg)),
+    }))
+  }
+
+  const handleUpdateAction = (subgoalId: string, actionIndex: number, content: string) => {
+    setData((prev) => ({
+      ...prev,
+      detailedActions: {
+        ...prev.detailedActions,
+        [subgoalId]: prev.detailedActions[subgoalId].map((action, i) =>
+          i === actionIndex ? { ...action, content } : action,
+        ),
+      },
+    }))
+  }
+
   if (step === "input") {
     return <GoalInput onGoalSubmit={handleGoalSubmit} isLoading={isLoading} />
   }
@@ -262,7 +289,15 @@ export default function MandalartApp() {
   }
 
   if (step === "visualization") {
-    return <MandalartVisualization data={data} onRestart={handleRestart} />
+    return (
+      <MandalartVisualization
+        data={data}
+        onRestart={handleRestart}
+        onUpdateMainGoal={handleUpdateMainGoal}
+        onUpdateSubgoal={handleUpdateSubgoal}
+        onUpdateAction={handleUpdateAction}
+      />
+    )
   }
 
   return null
