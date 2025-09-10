@@ -6,9 +6,12 @@ import { SubgoalReview } from "@/components/subgoal-review"
 import { DetailedActionsReview } from "@/components/detailed-actions-review"
 import { MandalartVisualization } from "@/components/mandalart-visualization"
 import { generateSubgoals, generateDetailedActions } from "@/lib/actions"
+import { useLanguage } from "@/lib/language-context"
 import type { MandalartData, MandalartCell, AppStep } from "@/lib/types"
 
 export default function MandalartApp() {
+  const { t } = useLanguage()
+
   const [step, setStep] = useState<AppStep>("input")
   const [isLoading, setIsLoading] = useState(false)
   const [data, setData] = useState<MandalartData>({
@@ -265,7 +268,7 @@ export default function MandalartApp() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-lg text-gray-600">Generating detailed actions for each subgoal...</p>
+          <p className="text-lg text-gray-600">{t("actions.generating")}</p>
         </div>
       </div>
     )
