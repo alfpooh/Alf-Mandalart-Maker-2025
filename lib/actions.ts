@@ -1,7 +1,7 @@
 "use server"
 
-// import { groq } from "@ai-sdk/groq"
-// import { generateText } from "ai"
+import { groq } from "@ai-sdk/groq"
+import { generateText } from "ai"
 
 // Detect language of the input text
 function detectLanguage(text: string): string {
@@ -16,7 +16,57 @@ function detectLanguage(text: string): string {
 export async function generateSubgoals(mainGoal: string) {
   try {
     const language = detectLanguage(mainGoal)
+    const languageInstruction =
+      language === "Korean" ? "모든 응답을 한국어로 작성하세요." : "Write all responses in English."
 
+    const { text } = await generateText({
+      model: groq("llama-3.1-8b-instant"),
+      prompt: `${languageInstruction}
+
+Break down this main goal into exactly 8 specific, actionable subgoals: "${mainGoal}"
+
+Each subgoal should be:
+- Specific and measurable
+- Directly contributing to the main goal
+- Actionable and realistic
+- Distinct from the other subgoals
+- Written as a clear goal statement
+
+Format your response as a numbered list with exactly 8 items, one subgoal per line.
+1. First subgoal
+2. Second subgoal
+...and so on.
+
+Do not include any other text or explanations.`,
+    })
+
+    // Parse the numbered list response
+    const lines = text.split("\n").filter((line) => line.trim() !== "")
+    const subgoals = lines
+      .map((line) => {
+        // Remove numbers and any leading characters
+        const match = line.match(/^\d+\.\s*(.+)$/)
+        return match ? match[1].trim() : line.trim()
+      })
+      .filter(Boolean)
+      .slice(0, 8) // Ensure we have at most 8 items
+
+    // If we don't have enough subgoals, add generic ones
+    while (subgoals.length < 8) {
+      const genericText =
+        language === "Korean"
+          ? `${mainGoal}을(를) 위한 추가 단계 (${subgoals.length + 1})`
+          : `Additional step for: ${mainGoal} (${subgoals.length + 1})`
+      subgoals.push(genericText)
+    }
+
+    return { success: true, subgoals }
+  } catch (error) {
+    console.error("Error generating subgoals:", error)
+
+    const language = detectLanguage(mainGoal)
+
+    // Fallback: generate default subgoals if all AI approaches fail
     const fallbackSubgoals =
       language === "Korean"
         ? [
@@ -41,16 +91,63 @@ export async function generateSubgoals(mainGoal: string) {
           ]
 
     return { success: true, subgoals: fallbackSubgoals }
-  } catch (error) {
-    console.error("Error generating subgoals:", error)
-    return { success: false, subgoals: [] }
   }
 }
 
 export async function generateDetailedActions(subgoal: string, mainGoal: string) {
   try {
     const language = detectLanguage(mainGoal)
+    const languageInstruction =
+      language === "Korean" ? "모든 응답을 한국어로 작성하세요." : "Write all responses in English."
 
+    const { text } = await generateText({
+      model: groq("llama-3.1-8b-instant"),
+      prompt: `${languageInstruction}
+
+For the subgoal "${subgoal}" which contributes to the main goal "${mainGoal}", generate exactly 8 specific, actionable steps or tasks.
+
+Each action should be:
+- Very specific and concrete
+- Something that can be completed in a reasonable timeframe
+- Directly supporting the subgoal
+- Measurable or observable
+- Written as a clear action statement
+
+Format your response as a numbered list with exactly 8 items, one action per line.
+1. First action
+2. Second action
+...and so on.
+
+Do not include any other text or explanations.`,
+    })
+
+    // Parse the numbered list response
+    const lines = text.split("\n").filter((line) => line.trim() !== "")
+    const actions = lines
+      .map((line) => {
+        // Remove numbers and any leading characters
+        const match = line.match(/^\d+\.\s*(.+)$/)
+        return match ? match[1].trim() : line.trim()
+      })
+      .filter(Boolean)
+      .slice(0, 8) // Ensure we have at most 8 items
+
+    // If we don't have enough actions, add generic ones
+    while (actions.length < 8) {
+      const genericText =
+        language === "Korean"
+          ? `${subgoal}을(를) 위한 추가 단계 (${actions.length + 1})`
+          : `Additional step for: ${subgoal} (${actions.length + 1})`
+      actions.push(genericText)
+    }
+
+    return { success: true, actions }
+  } catch (error) {
+    console.error("Error generating detailed actions:", error)
+
+    const language = detectLanguage(mainGoal)
+
+    // Fallback: generate default actions if all AI approaches fail
     const fallbackActions =
       language === "Korean"
         ? [
@@ -75,8 +172,5 @@ export async function generateDetailedActions(subgoal: string, mainGoal: string)
           ]
 
     return { success: true, actions: fallbackActions }
-  } catch (error) {
-    console.error("Error generating detailed actions:", error)
-    return { success: false, actions: [] }
   }
 }

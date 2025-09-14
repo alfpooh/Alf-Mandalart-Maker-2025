@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { useLanguage } from "@/lib/language-context"
-import { LanguageSwitch } from "@/components/language-switch"
+import { Check, X, Edit2, Save } from "lucide-react"
 import type { MandalartCell } from "@/lib/types"
 
 interface SubgoalReviewProps {
@@ -30,30 +29,25 @@ export function SubgoalReview({
   onSaveEdit,
   onAcceptAll,
 }: SubgoalReviewProps) {
-  const { t } = useLanguage()
   const confirmedCount = subgoals.filter((sg) => sg.isConfirmed).length
   const allConfirmed = confirmedCount === 8
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="absolute top-4 right-4">
-        <LanguageSwitch />
-      </div>
-
       <div className="max-w-6xl mx-auto">
         <Card className="mb-6">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">{t("subgoal.review.title")}</CardTitle>
+            <CardTitle className="text-2xl font-bold">Review Your Subgoals</CardTitle>
             <p className="text-gray-600">
-              {t("visualization.main.goal")}: <span className="font-semibold">{mainGoal}</span>
+              Main Goal: <span className="font-semibold">{mainGoal}</span>
             </p>
             <div className="flex flex-col items-center gap-3">
               <Badge variant="outline" className="mx-auto">
-                {confirmedCount}/8 {t("subgoal.review.title")}
+                {confirmedCount}/8 Subgoals Confirmed
               </Badge>
               {confirmedCount < 8 && (
-                <Button onClick={onAcceptAll} variant="outline" className="px-6 bg-transparent">
-                  {t("subgoal.review.accept.all")}
+                <Button onClick={onAcceptAll} variant="outline" className="px-6">
+                  모든 서브골 확인하기
                 </Button>
               )}
             </div>
@@ -92,27 +86,30 @@ export function SubgoalReview({
                 <div className="flex gap-2">
                   {subgoal.isEditing ? (
                     <Button size="sm" onClick={() => onSaveEdit(index)} className="flex-1">
-                      💾 {t("save")}
+                      <Save className="w-4 h-4 mr-1" />
+                      Save
                     </Button>
                   ) : subgoal.isConfirmed ? (
                     <div className="flex gap-2 w-full">
                       <Badge variant="default" className="flex-1 justify-center">
-                        ✅ {t("subgoal.confirm")}
+                        <Check className="w-4 h-4 mr-1" />
+                        Confirmed
                       </Badge>
                       <Button size="sm" variant="outline" onClick={() => onStartEdit(index)}>
-                        ✏️
+                        <Edit2 className="w-4 h-4" />
                       </Button>
                     </div>
                   ) : (
                     <>
                       <Button size="sm" variant="outline" onClick={() => onStartEdit(index)} className="flex-1">
-                        ✏️ {t("edit")}
+                        <Edit2 className="w-4 h-4 mr-1" />
+                        Edit
                       </Button>
                       <Button size="sm" variant="destructive" onClick={() => onSubgoalReject(index)}>
-                        ❌
+                        <X className="w-4 h-4" />
                       </Button>
                       <Button size="sm" onClick={() => onSubgoalConfirm(index)}>
-                        ✅
+                        <Check className="w-4 h-4" />
                       </Button>
                     </>
                   )}
@@ -125,7 +122,7 @@ export function SubgoalReview({
         {allConfirmed && (
           <div className="text-center">
             <Button onClick={onAllConfirmed} size="lg" className="px-8">
-              {t("subgoal.review.generate.details")}
+              Generate Detailed Actions
             </Button>
           </div>
         )}
