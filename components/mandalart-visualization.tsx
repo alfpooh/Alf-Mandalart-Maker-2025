@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Download, Printer, FileText } from "lucide-react"
-import html2canvas from "html2canvas"
-import jsPDF from "jspdf"
+import dynamic from "next/dynamic"
+
+const jsPDF = dynamic(() => import("jspdf"), { ssr: false })
 
 interface MandalartData {
   mainGoal: { id: string; content: string; isConfirmed: boolean; isEditing: boolean }
@@ -245,6 +245,9 @@ END OF DOCUMENT
     setIsGeneratingPDF(true)
 
     try {
+      const html2canvas = (await import("html2canvas")).default
+      const { jsPDF } = await import("jspdf")
+
       // Create a new jsPDF instance
       const pdf = new jsPDF("p", "mm", "a4")
       const pageWidth = pdf.internal.pageSize.getWidth()
@@ -466,16 +469,13 @@ END OF DOCUMENT
             <h2 className="text-3xl font-bold">Mandalart Visualization</h2>
             <div className="flex gap-2">
               <Button onClick={downloadTXT} className="flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                TXT 다운로드
+                📄 TXT 다운로드
               </Button>
               <Button onClick={handlePrint} className="flex items-center gap-2">
-                <Printer className="w-4 h-4" />
-                인쇄하기
+                🖨️ 인쇄하기
               </Button>
               <Button onClick={downloadPDF} disabled={isGeneratingPDF} className="flex items-center gap-2">
-                <Download className="w-4 h-4" />
-                {isGeneratingPDF ? "PDF 생성 중..." : "PDF 다운로드"}
+                📥 {isGeneratingPDF ? "PDF 생성 중..." : "PDF 다운로드"}
               </Button>
             </div>
           </div>
@@ -684,4 +684,8 @@ END OF DOCUMENT
       </div>
     </>
   )
+}
+
+function generateTextContent(): string {
+  return "Mandalart content placeholder"
 }

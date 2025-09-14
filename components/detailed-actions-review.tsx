@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Check, X, Edit2, Save } from "lucide-react"
 import type { MandalartCell } from "@/lib/types"
 
 interface DetailedActionsReviewProps {
@@ -96,11 +95,11 @@ export function DetailedActionsReview({
                               onClick={() => onSaveEdit(subgoal.id, actionIndex)}
                               className="flex-1 text-xs"
                             >
-                              <Save className="w-3 h-3" />
+                              💾
                             </Button>
                           ) : action.isConfirmed ? (
                             <Badge variant="default" className="flex-1 justify-center text-xs">
-                              <Check className="w-3 h-3" />
+                              ✅
                             </Badge>
                           ) : (
                             <>
@@ -110,7 +109,7 @@ export function DetailedActionsReview({
                                 onClick={() => onStartEdit(subgoal.id, actionIndex)}
                                 className="flex-1 text-xs p-1"
                               >
-                                <Edit2 className="w-3 h-3" />
+                                ✏️
                               </Button>
                               <Button
                                 size="sm"
@@ -118,14 +117,14 @@ export function DetailedActionsReview({
                                 onClick={() => onActionReject(subgoal.id, actionIndex)}
                                 className="text-xs p-1"
                               >
-                                <X className="w-3 h-3" />
+                                ❌
                               </Button>
                               <Button
                                 size="sm"
                                 onClick={() => onActionConfirm(subgoal.id, actionIndex)}
                                 className="text-xs p-1"
                               >
-                                <Check className="w-3 h-3" />
+                                ✅
                               </Button>
                             </>
                           )}

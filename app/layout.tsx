@@ -20,21 +20,23 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
+      <head></head>
+      <body>
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-863WB90YC8" strategy="afterInteractive" />
         <Script id="google-analytics" strategy="afterInteractive">
           {`
+            console.log('[v0] Loading Google Analytics...');
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
             gtag('config', 'G-863WB90YC8', {
-              page_title: document.title,
-              page_location: window.location.href
+              send_page_view: true,
+              anonymize_ip: true,
+              cookie_flags: 'SameSite=None;Secure'
             });
+            console.log('[v0] Google Analytics configured');
           `}
         </Script>
-      </head>
-      <body>
         <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>

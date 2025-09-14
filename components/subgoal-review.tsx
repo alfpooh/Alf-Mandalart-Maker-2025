@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Check, X, Edit2, Save } from "lucide-react"
 import { useLanguage } from "@/lib/language-context"
 import { LanguageSwitch } from "@/components/language-switch"
 import type { MandalartCell } from "@/lib/types"
@@ -93,30 +92,27 @@ export function SubgoalReview({
                 <div className="flex gap-2">
                   {subgoal.isEditing ? (
                     <Button size="sm" onClick={() => onSaveEdit(index)} className="flex-1">
-                      <Save className="w-4 h-4 mr-1" />
-                      {t("save")}
+                      💾 {t("save")}
                     </Button>
                   ) : subgoal.isConfirmed ? (
                     <div className="flex gap-2 w-full">
                       <Badge variant="default" className="flex-1 justify-center">
-                        <Check className="w-4 h-4 mr-1" />
-                        {t("subgoal.confirm")}
+                        ✅ {t("subgoal.confirm")}
                       </Badge>
                       <Button size="sm" variant="outline" onClick={() => onStartEdit(index)}>
-                        <Edit2 className="w-4 h-4" />
+                        ✏️
                       </Button>
                     </div>
                   ) : (
                     <>
                       <Button size="sm" variant="outline" onClick={() => onStartEdit(index)} className="flex-1">
-                        <Edit2 className="w-4 h-4 mr-1" />
-                        {t("edit")}
+                        ✏️ {t("edit")}
                       </Button>
                       <Button size="sm" variant="destructive" onClick={() => onSubgoalReject(index)}>
-                        <X className="w-4 h-4" />
+                        ❌
                       </Button>
                       <Button size="sm" onClick={() => onSubgoalConfirm(index)}>
-                        <Check className="w-4 h-4" />
+                        ✅
                       </Button>
                     </>
                   )}
