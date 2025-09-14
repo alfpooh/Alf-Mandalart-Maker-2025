@@ -1,6 +1,5 @@
 import type React from "react"
 import type { Metadata } from "next"
-import Script from "next/script"
 import { LanguageProvider } from "@/lib/language-context"
 import "./globals.css"
 
@@ -20,23 +19,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head></head>
+      <head>
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-863WB90YC8"></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-863WB90YC8');
+            `,
+          }}
+        />
+      </head>
       <body>
-        <Script src="https://www.googletagmanager.com/gtag/js?id=G-863WB90YC8" strategy="afterInteractive" />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            console.log('[v0] Loading Google Analytics...');
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-863WB90YC8', {
-              send_page_view: true,
-              anonymize_ip: true,
-              cookie_flags: 'SameSite=None;Secure'
-            });
-            console.log('[v0] Google Analytics configured');
-          `}
-        </Script>
         <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>
