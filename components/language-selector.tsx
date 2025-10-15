@@ -14,12 +14,12 @@ export function LanguageSelector() {
   const { language, setLanguage } = useLanguage()
 
   return (
-    <div className="fixed top-4 right-4 z-50 flex gap-2">
+    <div className="fixed top-4 right-4 z-50 flex flex-row items-center justify-between gap-5">
       {languages.map((lang) => (
         <button
           key={lang.code}
           onClick={() => setLanguage(lang.code)}
-          className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl transition-all duration-200 hover:scale-110 ${
+          className={`rounded-full flex items-center justify-center text-2xl transition-all duration-200 hover:scale-110 w-7 h-7 ${
               language === lang.code
                 ? "ring-4 ring-blue-500 shadow-lg scale-110"
                 : "ring-2 ring-gray-300 hover:ring-gray-400"
