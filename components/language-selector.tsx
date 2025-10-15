@@ -19,10 +19,7 @@ export function LanguageSelector() {
         <button
           key={lang.code}
           onClick={() => setLanguage(lang.code)}
-          className={`
-            w-12 h-12 rounded-full flex items-center justify-center text-2xl
-            transition-all duration-200 hover:scale-110
-            ${
+          className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl transition-all duration-200 hover:scale-110 ${
               language === lang.code
                 ? "ring-4 ring-blue-500 shadow-lg scale-110"
                 : "ring-2 ring-gray-300 hover:ring-gray-400"
