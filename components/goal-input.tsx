@@ -32,13 +32,13 @@ export function GoalInput({ onGoalSubmit, isLoading }: GoalInputProps) {
             src="/images/mandalart-cover.png"
             alt="Mandalart Goal Planning - Visualize your dreams and goals"
             fill
-            className="object-contain object-center"
+            className="object-contain object-center bg-background"
             priority
           />
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-4">
+      <div className="flex-1 flex items-center justify-center p-4 bg-border">
         <Card className="w-full max-w-2xl">
           <CardHeader className="text-center">
             <CardTitle className="text-3xl font-bold text-gray-800">Mandalart Goal Planner</CardTitle>
