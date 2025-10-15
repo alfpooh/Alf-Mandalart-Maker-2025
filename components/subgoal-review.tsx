@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Check, X, Edit2, Save } from "lucide-react"
 import type { MandalartCell } from "@/lib/types"
+import { useLanguage } from "@/lib/language-context"
 
 interface SubgoalReviewProps {
   mainGoal: string
@@ -29,6 +30,7 @@ export function SubgoalReview({
   onSaveEdit,
   onAcceptAll,
 }: SubgoalReviewProps) {
+  const { t } = useLanguage()
   const confirmedCount = subgoals.filter((sg) => sg.isConfirmed).length
   const allConfirmed = confirmedCount === 8
 
@@ -37,17 +39,17 @@ export function SubgoalReview({
       <div className="max-w-6xl mx-auto">
         <Card className="mb-6">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Review Your Subgoals</CardTitle>
+            <CardTitle className="text-2xl font-bold">{t("subgoalReview.title")}</CardTitle>
             <p className="text-gray-600">
-              Main Goal: <span className="font-semibold">{mainGoal}</span>
+              {t("subgoalReview.mainGoal")} <span className="font-semibold">{mainGoal}</span>
             </p>
             <div className="flex flex-col items-center gap-3">
               <Badge variant="outline" className="mx-auto">
-                {confirmedCount}/8 Subgoals Confirmed
+                {confirmedCount}/8 {t("subgoalReview.progress")}
               </Badge>
               {confirmedCount < 8 && (
-                <Button onClick={onAcceptAll} variant="outline" className="px-6">
-                  모든 서브골 확인하기
+                <Button onClick={onAcceptAll} variant="outline" className="px-6 bg-transparent">
+                  {t("subgoalReview.acceptAll")}
                 </Button>
               )}
             </div>
@@ -65,7 +67,9 @@ export function SubgoalReview({
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
-                    <div className="text-sm text-gray-500 mb-2">Subgoal {index + 1}</div>
+                    <div className="text-sm text-gray-500 mb-2">
+                      {t("subgoalReview.subgoal")} {index + 1}
+                    </div>
                     {subgoal.isEditing ? (
                       <Input
                         value={subgoal.content}
@@ -87,13 +91,13 @@ export function SubgoalReview({
                   {subgoal.isEditing ? (
                     <Button size="sm" onClick={() => onSaveEdit(index)} className="flex-1">
                       <Save className="w-4 h-4 mr-1" />
-                      Save
+                      {t("subgoalReview.save")}
                     </Button>
                   ) : subgoal.isConfirmed ? (
                     <div className="flex gap-2 w-full">
                       <Badge variant="default" className="flex-1 justify-center">
                         <Check className="w-4 h-4 mr-1" />
-                        Confirmed
+                        {t("subgoalReview.confirmed")}
                       </Badge>
                       <Button size="sm" variant="outline" onClick={() => onStartEdit(index)}>
                         <Edit2 className="w-4 h-4" />
@@ -103,7 +107,7 @@ export function SubgoalReview({
                     <>
                       <Button size="sm" variant="outline" onClick={() => onStartEdit(index)} className="flex-1">
                         <Edit2 className="w-4 h-4 mr-1" />
-                        Edit
+                        {t("subgoalReview.edit")}
                       </Button>
                       <Button size="sm" variant="destructive" onClick={() => onSubgoalReject(index)}>
                         <X className="w-4 h-4" />
@@ -122,7 +126,7 @@ export function SubgoalReview({
         {allConfirmed && (
           <div className="text-center">
             <Button onClick={onAllConfirmed} size="lg" className="px-8">
-              Generate Detailed Actions
+              {t("subgoalReview.generateActions")}
             </Button>
           </div>
         )}

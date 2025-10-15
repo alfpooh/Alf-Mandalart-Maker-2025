@@ -320,8 +320,11 @@ END OF DOCUMENT
         yPosition += 5
       })
 
-      // Save the PDF
-      const fileName = `Mandalart_${data.mainGoal.content.substring(0, 20).replace(/[^a-zA-Z0-9가-힣]/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`
+      const now = new Date()
+      const day = String(now.getDate()).padStart(2, "0")
+      const month = String(now.getMonth() + 1).padStart(2, "0")
+      const year = now.getFullYear()
+      const fileName = `AlfsMandalart_${day}.${month}.${year}.pdf`
       pdf.save(fileName)
     } catch (error) {
       console.error("Error generating PDF:", error)
