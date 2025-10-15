@@ -1,6 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 import "./globals.css"
+import { CopyrightFooter } from "@/components/copyright-footer"
 
 export const metadata: Metadata = {
   title: "v0 App",
@@ -31,7 +32,10 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <CopyrightFooter />
+      </body>
     </html>
   )
 }
