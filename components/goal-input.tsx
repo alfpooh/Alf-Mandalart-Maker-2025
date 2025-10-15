@@ -27,12 +27,12 @@ export function GoalInput({ onGoalSubmit, isLoading }: GoalInputProps) {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="w-full bg-white shadow-md">
-        <div className="relative w-full h-48 md:h-64 lg:h-80">
+        <div className="relative w-full h-48 md:h-64 lg:h-80 bg-gray-50">
           <Image
             src="/images/mandalart-cover.png"
             alt="Mandalart Goal Planning - Visualize your dreams and goals"
             fill
-            className="object-cover object-center"
+            className="object-contain object-center"
             priority
           />
         </div>
