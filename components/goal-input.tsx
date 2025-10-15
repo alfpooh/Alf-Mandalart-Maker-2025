@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { useLanguage } from "@/lib/language-context"
 
 interface GoalInputProps {
   onGoalSubmit: (goal: string) => void
@@ -16,6 +17,7 @@ interface GoalInputProps {
 
 export function GoalInput({ onGoalSubmit, isLoading }: GoalInputProps) {
   const [goal, setGoal] = useState("")
+  const { t } = useLanguage()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,7 +32,7 @@ export function GoalInput({ onGoalSubmit, isLoading }: GoalInputProps) {
         <div className="relative w-full h-48 md:h-64 lg:h-80 bg-gray-50">
           <Image
             src="/images/mandalart-cover.png"
-            alt="Mandalart Goal Planning - Visualize your dreams and goals"
+            alt={t("banner.alt")}
             fill
             className="object-contain object-center bg-background"
             priority
@@ -41,28 +43,26 @@ export function GoalInput({ onGoalSubmit, isLoading }: GoalInputProps) {
       <div className="flex-1 flex items-center justify-center p-4 bg-border">
         <Card className="w-full max-w-2xl">
           <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-bold text-gray-800">Mandalart Goal Planner</CardTitle>
-            <p className="text-gray-600 mt-2">
-              Start by entering your main goal. AI will help you break it down into actionable steps.
-            </p>
+            <CardTitle className="text-3xl font-bold text-gray-800">{t("goalInput.title")}</CardTitle>
+            <p className="text-gray-600 mt-2">{t("goalInput.description")}</p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <Label htmlFor="goal" className="text-lg font-medium">
-                  What is your main goal?
+                  {t("goalInput.label")}
                 </Label>
                 <Textarea
                   id="goal"
                   value={goal}
                   onChange={(e) => setGoal(e.target.value)}
-                  placeholder="e.g., Launch a successful online business, Learn a new language, Improve physical fitness..."
+                  placeholder={t("goalInput.placeholder")}
                   className="mt-2 min-h-[120px] text-lg"
                   disabled={isLoading}
                 />
               </div>
               <Button type="submit" className="w-full text-lg py-6" disabled={!goal.trim() || isLoading}>
-                {isLoading ? "Generating Subgoals..." : "Generate Subgoals"}
+                {isLoading ? t("goalInput.generating") : t("goalInput.generate")}
               </Button>
             </form>
           </CardContent>
