@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { Banner } from "@/components/banner"
 import { GoalInput } from "@/components/goal-input"
 import { SubgoalReview } from "@/components/subgoal-review"
 import { DetailedActionsReview } from "@/components/detailed-actions-review"
@@ -242,12 +241,7 @@ export default function MandalartApp() {
   }
 
   if (step === "input") {
-    return (
-      <>
-        <Banner />
-        <GoalInput onGoalSubmit={handleGoalSubmit} isLoading={isLoading} />
-      </>
-    )
+    return <GoalInput onGoalSubmit={handleGoalSubmit} isLoading={isLoading} />
   }
 
   if (step === "review-subgoals") {
