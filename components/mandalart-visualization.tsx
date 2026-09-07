@@ -3,6 +3,8 @@
 import type React from "react"
 import type { EditorDraft } from "@/lib/types"
 import { useLanguage } from "@/lib/language-context"
+import { MandalartGrid } from "@/components/mandalart-grid"
+import type { GridCell } from "@/lib/grid-layout"
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -54,35 +56,19 @@ export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({
     detailedActions: draft.actions,
   }
 
-  // Color scheme for different sections
-  const colors = {
-    mainGoal: "bg-indigo-600 text-white",
-    subgoals: [
-      "bg-red-400 text-white", // Top-left subgoal
-      "bg-orange-400 text-white", // Top-center subgoal
-      "bg-yellow-400 text-gray-800", // Top-right subgoal
-      "bg-green-400 text-white", // Middle-left subgoal
-      "bg-blue-400 text-white", // Middle-right subgoal
-      "bg-purple-400 text-white", // Bottom-left subgoal
-      "bg-pink-400 text-white", // Bottom-center subgoal
-      "bg-teal-400 text-white", // Bottom-right subgoal
-    ],
-    actions: [
-      "bg-red-100 text-red-800", // Actions for subgoal 0
-      "bg-orange-100 text-orange-800", // Actions for subgoal 1
-      "bg-yellow-100 text-yellow-800", // Actions for subgoal 2
-      "bg-green-100 text-green-800", // Actions for subgoal 3
-      "bg-blue-100 text-blue-800", // Actions for subgoal 4
-      "bg-purple-100 text-purple-800", // Actions for subgoal 5
-      "bg-pink-100 text-pink-800", // Actions for subgoal 6
-      "bg-teal-100 text-teal-800", // Actions for subgoal 7
-    ],
-  }
+  // Legend swatches only; the grid itself reads the --area-* tokens directly.
+  const colors = { mainGoal: "bg-[var(--area-center)] text-white" }
 
-  const handleCellClick = (cell: CellData) => {
-    if (cell.content.trim() === "") return // Don't open modal for empty cells
-
-    setEditingCell(cell)
+  const handleCellClick = (cell: GridCell) => {
+    if (cell.content.trim() === "" || cell.kind === "empty") return
+    setEditingCell({
+      content: cell.content,
+      colorClass: "",
+      type: cell.kind,
+      subgoalIndex: cell.subgoalIndex ?? undefined,
+      actionIndex: cell.actionIndex ?? undefined,
+      subgoalId: cell.subgoalId ?? undefined,
+    })
     setEditContent(cell.content)
     setIsModalOpen(true)
   }
@@ -341,91 +327,6 @@ END OF DOCUMENT
     }
   }
 
-  const createGrid = (): CellData[][] => {
-    const gridSize = 9
-    const grid: CellData[][] = Array(gridSize)
-      .fill(null)
-      .map(() =>
-        Array(gridSize).fill({
-          content: "",
-          colorClass: "bg-gray-50 text-gray-400 cursor-default",
-          type: "empty" as const,
-        }),
-      )
-
-    // Place central goal in the center
-    grid[4][4] = {
-      content: data.mainGoal.content,
-      colorClass: `${colors.mainGoal} cursor-pointer hover:opacity-80`,
-      type: "mainGoal",
-      id: data.mainGoal.id,
-    }
-
-    // Place subgoals around the central goal
-    const subgoalPositions = [
-      [1, 1], // Top-left
-      [1, 4], // Top-center
-      [1, 7], // Top-right
-      [4, 1], // Middle-left
-      [4, 7], // Middle-right
-      [7, 1], // Bottom-left
-      [7, 4], // Bottom-center
-      [7, 7], // Bottom-right
-    ]
-
-    data.subgoals.forEach((subgoal, index) => {
-      const [row, col] = subgoalPositions[index]
-      grid[row][col] = {
-        content: subgoal.content,
-        colorClass: `${colors.subgoals[index] || "bg-gray-400 text-white"} cursor-pointer hover:opacity-80`,
-        type: "subgoal",
-        id: subgoal.id,
-        subgoalIndex: index,
-      }
-    })
-
-    // Place detailed actions in their respective 3x3 sections
-    data.subgoals.forEach((subgoal, subgoalIndex) => {
-      const actions = data.detailedActions[subgoal.id] || []
-
-      // Map subgoal index to correct 3x3 section position
-      const sectionMapping = [
-        [0, 0], // subgoal 0 -> top-left section
-        [0, 3], // subgoal 1 -> top-center section
-        [0, 6], // subgoal 2 -> top-right section
-        [3, 0], // subgoal 3 -> middle-left section
-        [3, 6], // subgoal 4 -> middle-right section
-        [6, 0], // subgoal 5 -> bottom-left section
-        [6, 3], // subgoal 6 -> bottom-center section
-        [6, 6], // subgoal 7 -> bottom-right section
-      ]
-
-      const [sectionRow, sectionCol] = sectionMapping[subgoalIndex] || [0, 0]
-
-      // Place actions around the subgoal in its 3x3 section
-      let actionIndex = 0
-      for (let r = 0; r < 3; r++) {
-        for (let c = 0; c < 3; c++) {
-          if (r === 1 && c === 1) continue // Skip center (that's where the subgoal is)
-          if (actionIndex < actions.length) {
-            grid[sectionRow + r][sectionCol + c] = {
-              content: actions[actionIndex].content,
-              colorClass: `${colors.actions[subgoalIndex] || "bg-gray-100 text-gray-600"} cursor-pointer hover:opacity-80`,
-              type: "action",
-              id: actions[actionIndex].id,
-              subgoalId: subgoal.id,
-              actionIndex: actionIndex,
-            }
-            actionIndex++
-          }
-        }
-      }
-    })
-
-    return grid
-  }
-
-  const grid = createGrid()
 
   const getCellTypeLabel = (type: string) => {
     switch (type) {
@@ -471,10 +372,10 @@ END OF DOCUMENT
       `}</style>
 
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 flex flex-col items-center">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mb-6 no-print">
-            <h2 className="text-3xl font-bold">{t("visualization.title")}</h2>
-            <div className="flex gap-2">
+        <div className="w-full max-w-7xl mx-auto">
+          <div className="flex flex-wrap justify-between items-center gap-3 mb-6 no-print">
+            <h2 className="text-2xl sm:text-3xl font-bold">{t("visualization.title")}</h2>
+            <div className="flex flex-wrap gap-2">
               <Button onClick={onBack} variant="outline">
                 {t("visualization.back")}
               </Button>
@@ -502,43 +403,45 @@ END OF DOCUMENT
             </div>
 
             {/* Legend */}
-            <div className="mb-6 p-4 bg-white rounded-lg shadow-sm">
-              <h3 className="text-lg font-semibold mb-3 text-center">{t("visualization.colorLegend")}</h3>
+            <div className="mb-6 rounded-lg bg-white p-4 shadow-sm">
               <div className="flex flex-wrap justify-center gap-4 text-sm">
                 <div className="flex items-center gap-2">
-                  <div className={`w-4 h-4 rounded ${colors.mainGoal}`}></div>
-                  <span>Main Goal</span>
+                  <div className="h-4 w-4 rounded" style={{ background: "var(--area-center)" }} />
+                  <span>{t("visualization.mainGoal")}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded bg-red-400"></div>
-                  <span>Subgoals</span>
+                  <div className="flex" aria-hidden="true">
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                      <div
+                        key={n}
+                        className="h-4 w-2 first:rounded-l last:rounded-r"
+                        style={{ background: `var(--area-${n})` }}
+                      />
+                    ))}
+                  </div>
+                  <span>{t("visualization.subgoals")}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded bg-red-100 border border-red-200"></div>
-                  <span>Action Items</span>
+                  <div className="flex" aria-hidden="true">
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                      <div
+                        key={n}
+                        className="h-4 w-2 first:rounded-l last:rounded-r"
+                        style={{ background: `var(--area-${n}-soft)` }}
+                      />
+                    ))}
+                  </div>
+                  <span>{t("visualization.actionItems")}</span>
                 </div>
               </div>
-              <p className="text-center text-sm text-gray-600 mt-2 no-print">
+              <p className="mt-2 text-center text-sm text-gray-600 no-print">
                 {t("visualization.clickToEdit")}
               </p>
             </div>
 
             {/* Mandalart Chart */}
             <div className="mb-8 print-chart">
-              <div className="grid grid-cols-9 gap-1 border-2 border-gray-600 shadow-lg rounded-md overflow-hidden bg-white">
-                {grid.map((row, rowIndex) =>
-                  row.map((cell, colIndex) => (
-                    <div
-                      key={`${rowIndex}-${colIndex}`}
-                      className={`w-20 h-20 border border-gray-300 flex items-center justify-center font-medium break-words text-center transition-all hover:scale-105 ${cell.colorClass}`}
-                      style={{ fontSize: "0.5rem", lineHeight: "1.1" }}
-                      onClick={() => handleCellClick(cell)}
-                    >
-                      <span className="p-1">{cell.content}</span>
-                    </div>
-                  )),
-                )}
-              </div>
+              <MandalartGrid draft={draft} onCellClick={handleCellClick} />
             </div>
 
             {/* Detailed Content */}
@@ -582,56 +485,18 @@ END OF DOCUMENT
             </div>
           </div>
 
-          {/* Section Labels */}
-          <div className="mt-4 grid grid-cols-3 gap-8 text-center text-sm text-gray-600 no-print">
-            <div className="space-y-1">
-              <div className="font-semibold">Top Sections</div>
-              <div className="flex justify-center gap-2">
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-red-400"></div>
-                  <span>1</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-orange-400"></div>
-                  <span>2</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-yellow-400"></div>
-                  <span>3</span>
-                </div>
+          {/* Area key — eight colours, each tying a block to its subgoal. */}
+          <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4 no-print">
+            {draft.subgoals.map((subgoal, index) => (
+              <div key={subgoal.id} className="flex items-center gap-2 min-w-0">
+                <span
+                  aria-hidden="true"
+                  className="h-3 w-3 flex-none rounded-sm"
+                  style={{ background: `var(--area-${index + 1})` }}
+                />
+                <span className="truncate text-gray-700">{subgoal.content}</span>
               </div>
-            </div>
-            <div className="space-y-1">
-              <div className="font-semibold">Middle Sections</div>
-              <div className="flex justify-center gap-2">
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-green-400"></div>
-                  <span>4</span>
-                </div>
-                <div className={`w-3 h-3 rounded ${colors.mainGoal}`}></div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-blue-400"></div>
-                  <span>5</span>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <div className="font-semibold">Bottom Sections</div>
-              <div className="flex justify-center gap-2">
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-purple-400"></div>
-                  <span>6</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-pink-400"></div>
-                  <span>7</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-teal-400"></div>
-                  <span>8</span>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
 
           <div className="text-center mt-8 no-print">

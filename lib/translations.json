@@ -112,6 +112,14 @@
         "75": "마무리",
         "100": "완료"
       }
+    },
+    "grid": {
+      "label": "만다라트 9x9 그리드",
+      "viewFull": "전체 보기",
+      "viewOverview": "중심 영역만",
+      "backToOverview": "중심으로",
+      "tapArea": "영역을 누르면 그 영역의 8가지 실행이 열립니다",
+      "narrowHint": "화면이 좁아 글자가 작습니다"
     }
   },
   "en": {
@@ -227,6 +235,14 @@
         "75": "Nearly done",
         "100": "Done"
       }
+    },
+    "grid": {
+      "label": "Mandalart 9x9 grid",
+      "viewFull": "Full grid",
+      "viewOverview": "Centre only",
+      "backToOverview": "Back to centre",
+      "tapArea": "Tap an area to open its eight actions",
+      "narrowHint": "Text is small at this width"
     }
   },
   "fi": {
@@ -342,6 +358,14 @@
         "75": "Lähes valmis",
         "100": "Valmis"
       }
+    },
+    "grid": {
+      "label": "Mandalart 9x9 -ruudukko",
+      "viewFull": "Koko ruudukko",
+      "viewOverview": "Vain keskus",
+      "backToOverview": "Takaisin keskukseen",
+      "tapArea": "Avaa alueen kahdeksan toimenpidettä napauttamalla",
+      "narrowHint": "Teksti on pientä tällä leveydellä"
     }
   }
 }

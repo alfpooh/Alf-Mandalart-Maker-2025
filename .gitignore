@@ -28,3 +28,6 @@ next-env.d.ts
 
 # keep the template, not the secrets
 !.env.example
+
+# this repo uses pnpm-lock.yaml; npm was only a local workaround
+package-lock.json
