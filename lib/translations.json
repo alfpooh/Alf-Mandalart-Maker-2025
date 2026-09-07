@@ -194,6 +194,14 @@
       "title": "만다라트 목표 플래너",
       "newPlan": "새 만다라트",
       "confirmLeave": "생성이 진행 중입니다. 지금 나가면 이번 생성은 취소되고 오늘 사용량은 되돌아오지 않습니다. 나가시겠습니까?"
+    },
+    "steps": {
+      "label": "만다라트 작성 단계",
+      "goal": "목표",
+      "subgoals": "서브목표",
+      "actions": "액션",
+      "done": "완성",
+      "backTo": "이 단계로 돌아가기"
     }
   },
   "en": {
@@ -391,6 +399,14 @@
       "title": "Mandalart Goal Planner",
       "newPlan": "New Mandalart",
       "confirmLeave": "A run is in progress. Leaving now cancels it, and today's usage is not refunded. Leave anyway?"
+    },
+    "steps": {
+      "label": "Mandalart steps",
+      "goal": "Goal",
+      "subgoals": "Areas",
+      "actions": "Actions",
+      "done": "Done",
+      "backTo": "Back to this step"
     }
   },
   "fi": {
@@ -588,6 +604,14 @@
       "title": "Mandalart-tavoitesuunnittelija",
       "newPlan": "Uusi Mandalart",
       "confirmLeave": "Luonti on kesken. Poistuminen peruu sen, eikä päivän käyttöä palauteta. Poistutaanko silti?"
+    },
+    "steps": {
+      "label": "Mandalartin vaiheet",
+      "goal": "Tavoite",
+      "subgoals": "Alueet",
+      "actions": "Toimenpiteet",
+      "done": "Valmis",
+      "backTo": "Takaisin tähän vaiheeseen"
     }
   }
 }

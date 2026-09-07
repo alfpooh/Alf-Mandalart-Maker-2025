@@ -1,12 +1,13 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react"
 import { useParams, useRouter } from "next/navigation"
 
 import { AnalyzingOrder } from "@/components/analyzing-order"
 import { DetailedActionsReview } from "@/components/detailed-actions-review"
 import { GeneratingActions } from "@/components/generating-actions"
 import { MandalartVisualization } from "@/components/mandalart-visualization"
+import { StepProgress } from "@/components/step-progress"
 import { SubgoalReview } from "@/components/subgoal-review"
 import { analyzeDependencies, generateActionsForSubgoal } from "@/lib/actions"
 import { useLanguage } from "@/lib/language-context"
@@ -21,10 +22,10 @@ import {
   withActions,
   withDependencies,
 } from "@/lib/store/local-drafts"
-import type { EditorDraft } from "@/lib/types"
+import type { AppStep, EditorDraft } from "@/lib/types"
 import type { SessionInfo } from "@/lib/plans"
 import { newTicket } from "@/lib/ticket"
-import { setBusy } from "@/lib/busy"
+import { isBusy, setBusy, subscribeBusy } from "@/lib/busy"
 import { TeaserSession } from "@/components/teaser-session"
 import { markTeaserSeen, wasTeaserSeen } from "@/lib/store/local-drafts"
 
@@ -46,6 +47,8 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
   const [analyzed, setAnalyzed] = useState<Set<string>>(new Set())
   const [showTeaser, setShowTeaser] = useState(false)
   const [ticket, setTicket] = useState<string | null>(null)
+
+  const busy = useSyncExternalStore(subscribeBusy, isBusy, () => false)
 
   // The teaser runs once a plan is finished, only for people who do not yet
   // have the features it shows, and only once per plan — a wall on every visit
@@ -209,70 +212,69 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
     )
   }
 
-  if (draft.step === "review-subgoals") {
+  const goTo = (step: AppStep) => update((d) => ({ ...d, step }))
+
+  const screen = () => {
+    if (draft.step === "review-subgoals") {
+      return (
+        <SubgoalReview
+          mainGoal={draft.mainGoal}
+          subgoals={draft.subgoals}
+          onSubgoalUpdate={(i, content) => update((d) => patchSubgoal(d, i, { content }))}
+          onSubgoalConfirm={(i) =>
+            update((d) => patchSubgoal(d, i, { isConfirmed: true, isEditing: false }))
+          }
+          onStartEdit={(i) => update((d) => patchSubgoal(d, i, { isEditing: true }))}
+          onSaveEdit={(i) =>
+            update((d) => patchSubgoal(d, i, { isEditing: false, isConfirmed: true }))
+          }
+          onAcceptAll={() => update(confirmAllSubgoals)}
+          onAllConfirmed={handleGenerateActions}
+        />
+      )
+    }
+
+    if (draft.step === "analyzing-order") {
+      return <AnalyzingOrder subgoals={draft.subgoals} done={analyzed} ticketId={ticket} />
+    }
+
+    if (draft.step === "generating-actions") {
+      return (
+        <GeneratingActions
+          subgoals={draft.subgoals}
+          actions={draft.actions}
+          ticketId={ticket}
+        />
+      )
+    }
+
+    if (draft.step === "review-actions") {
+      return (
+        <DetailedActionsReview
+          mainGoal={draft.mainGoal}
+          subgoals={draft.subgoals}
+          detailedActions={draft.actions}
+          failedSubgoals={failures}
+          onActionUpdate={(id, i, content) => update((d) => patchAction(d, id, i, { content }))}
+          onActionConfirm={(id, i) =>
+            update((d) => patchAction(d, id, i, { isConfirmed: true, isEditing: false }))
+          }
+          onStartEdit={(id, i) => update((d) => patchAction(d, id, i, { isEditing: true }))}
+          onSaveEdit={(id, i) =>
+            update((d) => patchAction(d, id, i, { isEditing: false, isConfirmed: true }))
+          }
+          onAcceptAllActions={(id) => update((d) => confirmAllActions(d, id))}
+          onComplete={handleFinishReview}
+          onRetrySubgoal={handleRetryFailed}
+        />
+      )
+    }
+
     return (
-      <SubgoalReview
-        mainGoal={draft.mainGoal}
-        subgoals={draft.subgoals}
-        onSubgoalUpdate={(i, content) => update((d) => patchSubgoal(d, i, { content }))}
-        onSubgoalConfirm={(i) =>
-          update((d) => patchSubgoal(d, i, { isConfirmed: true, isEditing: false }))
-        }
-        onStartEdit={(i) => update((d) => patchSubgoal(d, i, { isEditing: true }))}
-        onSaveEdit={(i) =>
-          update((d) => patchSubgoal(d, i, { isEditing: false, isConfirmed: true }))
-        }
-        onAcceptAll={() => update(confirmAllSubgoals)}
-        onAllConfirmed={handleGenerateActions}
-      />
-    )
-  }
-
-  if (draft.step === "analyzing-order") {
-    return <AnalyzingOrder subgoals={draft.subgoals} done={analyzed} ticketId={ticket} />
-  }
-
-  if (draft.step === "generating-actions") {
-    return (
-      <GeneratingActions
-        subgoals={draft.subgoals}
-        actions={draft.actions}
-        ticketId={ticket}
-      />
-    )
-  }
-
-  if (draft.step === "review-actions") {
-    return (
-      <DetailedActionsReview
-        mainGoal={draft.mainGoal}
-        subgoals={draft.subgoals}
-        detailedActions={draft.actions}
-        failedSubgoals={failures}
-        onActionUpdate={(id, i, content) => update((d) => patchAction(d, id, i, { content }))}
-        onActionConfirm={(id, i) =>
-          update((d) => patchAction(d, id, i, { isConfirmed: true, isEditing: false }))
-        }
-        onStartEdit={(id, i) => update((d) => patchAction(d, id, i, { isEditing: true }))}
-        onSaveEdit={(id, i) =>
-          update((d) => patchAction(d, id, i, { isEditing: false, isConfirmed: true }))
-        }
-        onAcceptAllActions={(id) => update((d) => confirmAllActions(d, id))}
-        onComplete={handleFinishReview}
-        onRetrySubgoal={handleRetryFailed}
-      />
-    )
-  }
-
-  return (
-    <>
-      {showTeaser && (
-        <TeaserSession draft={draft} onClose={() => setShowTeaser(false)} />
-      )}
       <MandalartVisualization
         draft={draft}
         locked={session.configured && !session.signedIn}
-        onBack={() => update((d) => ({ ...d, step: "review-actions" }))}
+        onBack={() => goTo("review-actions")}
         onRestart={() => router.push("/")}
         onUpdateMainGoal={(content) => update((d) => ({ ...d, mainGoal: content }))}
         onUpdateSubgoal={(i, content) => update((d) => patchSubgoal(d, i, { content }))}
@@ -282,6 +284,14 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
         }
         onShowTeaser={() => setShowTeaser(true)}
       />
+    )
+  }
+
+  return (
+    <>
+      {showTeaser && <TeaserSession draft={draft} onClose={() => setShowTeaser(false)} />}
+      <StepProgress current={draft.step} onNavigate={goTo} busy={busy} />
+      {screen()}
     </>
   )
 }
