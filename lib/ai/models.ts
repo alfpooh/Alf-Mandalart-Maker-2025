@@ -50,20 +50,32 @@ const PROVIDERS: Record<ProviderId, (modelId: string) => LanguageModel> = {
 const DEFAULT_PROVIDER: ProviderId = "groq"
 
 /**
- * Current default. Section 06 of the plan flags `dependencies` and `review` as
- * the two jobs to measure on an 8B model first — if they fall short, raise just
- * those via `AI_MODEL_DEPENDENCIES` / `AI_MODEL_REVIEW` rather than moving
- * everything.
+ * Default for the generation jobs.
+ *
+ * `llama-3.1-8b-instant`, which this app shipped with, was withdrawn from Groq
+ * and now returns 404 `model_not_found`. Of what remains, only the gpt-oss
+ * family accepts `response_format: json_schema`; qwen and the compound models
+ * reject it with a 400, and structured output is what replaced the old regex
+ * parsing, so they are not usable here.
  */
-const DEFAULT_MODEL = "llama-3.1-8b-instant"
+const DEFAULT_MODEL = "openai/gpt-oss-20b"
+
+/**
+ * Working out prerequisites and reviewing a whole plan are the two jobs that
+ * need actual reasoning. Measured on the same eight actions, 120b found a
+ * correct prerequisite that 20b missed and gave better rationales, at roughly
+ * 1.5x the output tokens — worth it on the two calls per plan that carry the
+ * most judgement, not on the sixty-four that do not.
+ */
+const REASONING_MODEL = "openai/gpt-oss-120b"
 
 const TASK_DEFAULTS: Record<AiTask, string> = {
   subgoals: DEFAULT_MODEL,
   actions: DEFAULT_MODEL,
   refine: DEFAULT_MODEL,
-  dependencies: DEFAULT_MODEL,
+  dependencies: REASONING_MODEL,
   progress: DEFAULT_MODEL,
-  review: DEFAULT_MODEL,
+  review: REASONING_MODEL,
 }
 
 /** Env var carrying the override for one task, e.g. `AI_MODEL_SUBGOALS`. */
@@ -94,16 +106,17 @@ export function modelFor(task: AiTask): LanguageModel {
 /**
  * How long a task may run before it is abandoned.
  *
- * Action generation fans out to eight parallel calls behind one spinner, so it
- * gets the shortest leash — one slow call there stalls the whole screen.
+ * Generous, because a rate-limited call waits out its window and retries: on
+ * Groq's free tier a plan's calls exceed the per-minute token allowance
+ * between them, so finishing slowly beats failing fast.
  */
 export const TASK_TIMEOUT_MS: Record<AiTask, number> = {
-  subgoals: 30_000,
-  actions: 25_000,
-  refine: 20_000,
-  dependencies: 30_000,
-  progress: 15_000,
-  review: 45_000,
+  subgoals: 60_000,
+  actions: 60_000,
+  refine: 30_000,
+  dependencies: 90_000,
+  progress: 30_000,
+  review: 90_000,
 }
 
 /** Current configuration, for the health endpoint and for debugging. */

@@ -32,23 +32,83 @@ import { snapToStage, type ActionDependency, type Language, type ProgressValue }
  */
 export type AiResult<T> = { ok: true; data: T } | { ok: false; error: string }
 
+/**
+ * Runs an async mapper over items with a ceiling on how many are in flight.
+ *
+ * Groq's free tier caps tokens per minute (8,000 at the time of writing), and
+ * a plan's eight action calls want roughly 15,000 between them — gpt-oss spends
+ * reasoning tokens on top of the visible output. Firing all eight at once puts
+ * every one of them into the same rate-limit window and several fail together.
+ * Spreading them out costs a little wall time and returns eight complete areas
+ * instead of six.
+ */
+async function mapLimited<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length)
+  let next = 0
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const index = next++
+      results[index] = await fn(items[index], index)
+    }
+  })
+
+  await Promise.all(workers)
+  return results
+}
+
+/** How many model calls may be in flight at once. */
+const CONCURRENCY = Number(process.env.AI_CONCURRENCY ?? "2")
+
+/**
+ * True when a failure is worth another attempt with the same input.
+ *
+ * gpt-oss intermittently returns the JSON Schema it was given instead of data
+ * matching it. Groq rejects that as `json_validate_failed` and marks it
+ * non-retryable, so the SDK gives up — but the very same request usually
+ * succeeds on the next try, so it is retryable in practice.
+ */
+function isTransient(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  return /schema|json_validate|does not match|rate.?limit|429|5\d\d/i.test(message)
+}
+
+const MAX_ATTEMPTS = 3
+
 async function run<S extends z.ZodType>(
   task: AiTask,
   schema: S,
   prompt: string,
 ): Promise<AiResult<z.infer<S>>> {
-  try {
-    const { object } = await generateObject({
-      model: modelFor(task),
-      schema,
-      prompt,
-      abortSignal: AbortSignal.timeout(TASK_TIMEOUT_MS[task]),
-    })
-    return { ok: true, data: object }
-  } catch (error) {
-    console.error(`[ai:${task}]`, error)
-    return { ok: false, error: describeFailure(error) }
+  let lastError: unknown
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const { object } = await generateObject({
+        model: modelFor(task),
+        schema,
+        prompt,
+        // Rate-limit rejections are retryable and the window is short; the
+        // SDK's default of 2 gives up while the batch is still contending.
+        maxRetries: 5,
+        abortSignal: AbortSignal.timeout(TASK_TIMEOUT_MS[task]),
+      })
+      return { ok: true, data: object }
+    } catch (error) {
+      lastError = error
+      if (attempt === MAX_ATTEMPTS || !isTransient(error)) break
+      console.warn(`[ai:${task}] attempt ${attempt} failed, retrying`)
+      // A short pause also lets a rate-limit window move on.
+      await new Promise((resolve) => setTimeout(resolve, 400 * attempt))
+    }
   }
+
+  console.error(`[ai:${task}]`, lastError)
+  return { ok: false, error: describeFailure(lastError) }
 }
 
 /** Maps a thrown error onto a translation key the UI can render. */
@@ -116,16 +176,13 @@ export async function generateAllActions(
   mainGoal: string,
   language: Language,
 ): Promise<SubgoalActions[]> {
-  const results = await Promise.all(
-    subgoals.map(async (subgoal, index) => {
-      const siblings = subgoals.filter((_, i) => i !== index)
-      const result = await generateActionsForSubgoal(subgoal, mainGoal, siblings, language)
-      return result.ok
-        ? { subgoalIndex: index, actions: result.data, error: null }
-        : { subgoalIndex: index, actions: null, error: result.error }
-    }),
-  )
-  return results
+  return mapLimited(subgoals, CONCURRENCY, async (subgoal, index) => {
+    const siblings = subgoals.filter((_, i) => i !== index)
+    const result = await generateActionsForSubgoal(subgoal, mainGoal, siblings, language)
+    return result.ok
+      ? { subgoalIndex: index, actions: result.data, error: null }
+      : { subgoalIndex: index, actions: null, error: result.error }
+  })
 }
 
 /** Regenerates one cell. The old reject button rebuilt all eight to use one. */
@@ -221,24 +278,22 @@ export async function analyzeAllDependencies(
   planId: string,
   language: Language,
 ): Promise<SubgoalDependencies[]> {
-  return Promise.all(
-    subgoals.map(async (subgoal, index) => {
-      const actions = actionsBySubgoal[subgoal.id] ?? []
-      if (actions.length === 0) {
-        return { subgoalIndex: index, dependencies: [], error: null }
-      }
-      const result = await analyzeDependencies(
-        actions,
-        subgoal.content,
-        mainGoal,
-        planId,
-        language,
-      )
-      return result.ok
-        ? { subgoalIndex: index, dependencies: result.data, error: null }
-        : { subgoalIndex: index, dependencies: null, error: result.error }
-    }),
-  )
+  return mapLimited(subgoals, CONCURRENCY, async (subgoal, index) => {
+    const actions = actionsBySubgoal[subgoal.id] ?? []
+    if (actions.length === 0) {
+      return { subgoalIndex: index, dependencies: [], error: null }
+    }
+    const result = await analyzeDependencies(
+      actions,
+      subgoal.content,
+      mainGoal,
+      planId,
+      language,
+    )
+    return result.ok
+      ? { subgoalIndex: index, dependencies: result.data, error: null }
+      : { subgoalIndex: index, dependencies: null, error: result.error }
+  })
 }
 
 // ---------------------------------------------------------------------------

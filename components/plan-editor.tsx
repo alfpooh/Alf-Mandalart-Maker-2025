@@ -67,35 +67,49 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
     setDraft((current) => (current ? saveDraft(change(current)) : current))
   }, [])
 
+  /**
+   * Applies generated actions onto the *current* draft, not the one captured
+   * when generation started.
+   *
+   * A rate-limited call retries for a while, so results can land long after
+   * the request went out. Merging them into a stale snapshot silently discards
+   * whatever changed meanwhile — including earlier areas from the same batch,
+   * which is how a run that produced six areas ended up storing one.
+   */
   const runActionGeneration = useCallback(
-    async (current: EditorDraft) => {
-      const subgoals = current.subgoals.map((s) => s.content)
-      const results = await generateAllActions(subgoals, current.mainGoal, current.language)
+    async (subgoals: string[], mainGoal: string, language: EditorDraft["language"]) => {
+      const results = await generateAllActions(subgoals, mainGoal, language)
 
-      let next = current
-      const failed: number[] = []
-      for (const result of results) {
-        const subgoal = current.subgoals[result.subgoalIndex]
-        if (!subgoal) continue
-        if (result.actions) next = withActions(next, subgoal.id, result.actions)
-        else failed.push(result.subgoalIndex)
-      }
-
-      setFailures(failed)
-      // Areas that failed can be retried on their own; the rest are usable now.
-      setDraft(saveDraft({ ...next, step: "review-actions" }))
+      setDraft((latest) => {
+        if (!latest) return latest
+        let next = latest
+        const failed: number[] = []
+        for (const result of results) {
+          const subgoal = latest.subgoals[result.subgoalIndex]
+          if (!subgoal) continue
+          if (result.actions) next = withActions(next, subgoal.id, result.actions)
+          else failed.push(result.subgoalIndex)
+        }
+        setFailures(failed)
+        // Areas that failed can be retried on their own; the rest are usable.
+        return saveDraft({ ...next, step: "review-actions" })
+      })
     },
     [],
   )
 
+  // Kicking work off from inside a state updater runs it twice under React's
+  // development double-invoke, which doubles the API calls.
   const handleGenerateActions = useCallback(() => {
-    setDraft((current) => {
-      if (!current) return current
-      const generating = saveDraft({ ...current, step: "generating-actions" })
-      void runActionGeneration(generating)
-      return generating
-    })
-  }, [runActionGeneration])
+    if (!draft) return
+    const started = saveDraft({ ...draft, step: "generating-actions" })
+    setDraft(started)
+    void runActionGeneration(
+      started.subgoals.map((s) => s.content),
+      started.mainGoal,
+      started.language,
+    )
+  }, [draft, runActionGeneration])
 
   const runOrderAnalysis = useCallback(async (current: EditorDraft) => {
     const subgoals = current.subgoals.map((s) => ({ id: s.id, content: s.content }))
@@ -116,17 +130,20 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
 
     const edges = results.flatMap((r) => r.dependencies ?? [])
     setAnalyzed(new Set(current.subgoals.map((s) => s.id)))
-    setDraft(saveDraft({ ...withDependencies(current, edges), step: "visualization" }))
+    // Merged onto the latest draft, for the same reason as action generation.
+    setDraft((latest) =>
+      latest
+        ? saveDraft({ ...withDependencies(latest, edges), step: "visualization" })
+        : latest,
+    )
   }, [])
 
   const handleFinishReview = useCallback(() => {
-    setDraft((current) => {
-      if (!current) return current
-      const analyzing = saveDraft({ ...current, step: "analyzing-order" })
-      void runOrderAnalysis(analyzing)
-      return analyzing
-    })
-  }, [runOrderAnalysis])
+    if (!draft) return
+    const started = saveDraft({ ...draft, step: "analyzing-order" })
+    setDraft(started)
+    void runOrderAnalysis(started)
+  }, [draft, runOrderAnalysis])
 
   if (status === "loading") {
     return <div className="min-h-screen" aria-busy="true" />
