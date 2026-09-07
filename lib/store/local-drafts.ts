@@ -19,6 +19,7 @@ import {
 } from "../types"
 
 const INDEX_KEY = "mandalart.drafts"
+const TOKEN_KEY = "mandalart.draftToken"
 const DRAFT_PREFIX = "mandalart.draft."
 
 /** Drafts older than this are cleared, matching the 24h server-side draft TTL. */
@@ -227,4 +228,58 @@ export function confirmAllActions(draft: EditorDraft, subgoalId: string): Editor
       [subgoalId]: list.map((c) => ({ ...c, isConfirmed: true, isEditing: false })),
     },
   }
+}
+
+// ---------------------------------------------------------------------------
+// Draft token
+// ---------------------------------------------------------------------------
+
+/**
+ * The bearer token for the anonymous plan row on the server.
+ *
+ * Held separately from the drafts themselves because it outlives the tab: the
+ * sign-in redirect leaves the site entirely and comes back to /auth/claim,
+ * which reads this to move the plan onto the new account.
+ */
+export function saveDraftToken(planId: string, token: string): void {
+  const store = storage()
+  if (!store) return
+  try {
+    store.setItem(TOKEN_KEY, JSON.stringify({ planId, token }))
+  } catch {
+    /* the plan still exists locally; only the claim is lost */
+  }
+}
+
+export function readDraftToken(): string | null {
+  const store = storage()
+  if (!store) return null
+  try {
+    const raw = store.getItem(TOKEN_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { token?: unknown }
+    return typeof parsed?.token === "string" ? parsed.token : null
+  } catch {
+    return null
+  }
+}
+
+export function clearDraftToken(): void {
+  const store = storage()
+  if (!store) return
+  try {
+    store.removeItem(TOKEN_KEY)
+  } catch {
+    /* nothing useful to do */
+  }
+}
+
+/** Creates a draft under an id the server chose, so both sides agree. */
+export function createDraftWithId(
+  id: string,
+  mainGoal: string,
+  language: Language,
+  subgoals: string[],
+): EditorDraft {
+  return { ...createDraft(mainGoal, language, subgoals), id }
 }
