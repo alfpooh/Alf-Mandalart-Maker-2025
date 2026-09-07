@@ -3,6 +3,7 @@
 import { generateObject } from "ai"
 import type { z } from "zod"
 import { modelFor, TASK_TIMEOUT_MS, type AiTask } from "./ai/models"
+import { withSlot } from "./ai/queue"
 import {
   actionsPrompt,
   dependenciesPrompt,
@@ -33,38 +34,6 @@ import { snapToStage, type ActionDependency, type Language, type ProgressValue }
 export type AiResult<T> = { ok: true; data: T } | { ok: false; error: string }
 
 /**
- * Runs an async mapper over items with a ceiling on how many are in flight.
- *
- * Groq's free tier caps tokens per minute (8,000 at the time of writing), and
- * a plan's eight action calls want roughly 15,000 between them — gpt-oss spends
- * reasoning tokens on top of the visible output. Firing all eight at once puts
- * every one of them into the same rate-limit window and several fail together.
- * Spreading them out costs a little wall time and returns eight complete areas
- * instead of six.
- */
-async function mapLimited<T, R>(
-  items: T[],
-  limit: number,
-  fn: (item: T, index: number) => Promise<R>,
-): Promise<R[]> {
-  const results = new Array<R>(items.length)
-  let next = 0
-
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (next < items.length) {
-      const index = next++
-      results[index] = await fn(items[index], index)
-    }
-  })
-
-  await Promise.all(workers)
-  return results
-}
-
-/** How many model calls may be in flight at once. */
-const CONCURRENCY = Number(process.env.AI_CONCURRENCY ?? "2")
-
-/**
  * True when a failure is worth another attempt with the same input.
  *
  * gpt-oss intermittently returns the JSON Schema it was given instead of data
@@ -83,20 +52,25 @@ async function run<S extends z.ZodType>(
   task: AiTask,
   schema: S,
   prompt: string,
+  ticketId: string,
 ): Promise<AiResult<z.infer<S>>> {
   let lastError: unknown
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      const { object } = await generateObject({
-        model: modelFor(task),
-        schema,
-        prompt,
+      // Waiting for a slot happens per attempt, so a retry after a rate limit
+      // goes to the back of the queue instead of jumping ahead of newcomers.
+      const { object } = await withSlot(ticketId, () =>
+        generateObject({
+          model: modelFor(task),
+          schema,
+          prompt,
         // Rate-limit rejections are retryable and the window is short; the
         // SDK's default of 2 gives up while the batch is still contending.
-        maxRetries: 5,
-        abortSignal: AbortSignal.timeout(TASK_TIMEOUT_MS[task]),
-      })
+          maxRetries: 5,
+          abortSignal: AbortSignal.timeout(TASK_TIMEOUT_MS[task]),
+        }),
+      )
       return { ok: true, data: object }
     } catch (error) {
       lastError = error
@@ -127,11 +101,13 @@ function describeFailure(error: unknown): string {
 export async function generateSubgoals(
   mainGoal: string,
   language: Language,
+  ticketId: string,
 ): Promise<AiResult<string[]>> {
   const result = await run(
     "subgoals",
     subgoalsSchema,
     subgoalsPrompt(mainGoal, language),
+    ticketId,
   )
   if (!result.ok) return result
   return { ok: true, data: result.data.subgoals.map((s) => s.content) }
@@ -147,11 +123,13 @@ export async function generateActionsForSubgoal(
   mainGoal: string,
   siblingSubgoals: string[],
   language: Language,
+  ticketId: string,
 ): Promise<AiResult<GeneratedAction[]>> {
   const result = await run(
     "actions",
     actionsSchema,
     actionsPrompt(subgoal, mainGoal, siblingSubgoals, language),
+    ticketId,
   )
   if (!result.ok) return result
   return { ok: true, data: result.data.actions }
@@ -175,14 +153,24 @@ export async function generateAllActions(
   subgoals: string[],
   mainGoal: string,
   language: Language,
+  ticketId: string,
 ): Promise<SubgoalActions[]> {
-  return mapLimited(subgoals, CONCURRENCY, async (subgoal, index) => {
-    const siblings = subgoals.filter((_, i) => i !== index)
-    const result = await generateActionsForSubgoal(subgoal, mainGoal, siblings, language)
-    return result.ok
-      ? { subgoalIndex: index, actions: result.data, error: null }
-      : { subgoalIndex: index, actions: null, error: result.error }
-  })
+  // Fired together; the shared queue decides how many actually run at once.
+  return Promise.all(
+    subgoals.map(async (subgoal, index) => {
+      const siblings = subgoals.filter((_, i) => i !== index)
+      const result = await generateActionsForSubgoal(
+        subgoal,
+        mainGoal,
+        siblings,
+        language,
+        ticketId,
+      )
+      return result.ok
+        ? { subgoalIndex: index, actions: result.data, error: null }
+        : { subgoalIndex: index, actions: null, error: result.error }
+    }),
+  )
 }
 
 /** Regenerates one cell. The old reject button rebuilt all eight to use one. */
@@ -191,11 +179,13 @@ export async function refineCell(
   context: { mainGoal: string; subgoal?: string },
   mode: "specific" | "measurable" | "smaller" | "alternatives",
   language: Language,
+  ticketId: string,
 ): Promise<AiResult<{ content: string; rationale: string }[]>> {
   const result = await run(
     "refine",
     refineSchema,
     refinePrompt(content, context, mode, language),
+    ticketId,
   )
   if (!result.ok) return result
   return { ok: true, data: result.data.suggestions }
@@ -222,6 +212,7 @@ export async function analyzeDependencies(
   mainGoal: string,
   planId: string,
   language: Language,
+  ticketId: string,
 ): Promise<AiResult<ActionDependency[]>> {
   const result = await run(
     "dependencies",
@@ -232,6 +223,7 @@ export async function analyzeDependencies(
       mainGoal,
       language,
     ),
+    ticketId,
   )
   if (!result.ok) return result
 
@@ -277,23 +269,27 @@ export async function analyzeAllDependencies(
   mainGoal: string,
   planId: string,
   language: Language,
+  ticketId: string,
 ): Promise<SubgoalDependencies[]> {
-  return mapLimited(subgoals, CONCURRENCY, async (subgoal, index) => {
-    const actions = actionsBySubgoal[subgoal.id] ?? []
-    if (actions.length === 0) {
-      return { subgoalIndex: index, dependencies: [], error: null }
-    }
-    const result = await analyzeDependencies(
-      actions,
-      subgoal.content,
-      mainGoal,
-      planId,
-      language,
-    )
-    return result.ok
-      ? { subgoalIndex: index, dependencies: result.data, error: null }
-      : { subgoalIndex: index, dependencies: null, error: result.error }
-  })
+  return Promise.all(
+    subgoals.map(async (subgoal, index) => {
+      const actions = actionsBySubgoal[subgoal.id] ?? []
+      if (actions.length === 0) {
+        return { subgoalIndex: index, dependencies: [], error: null }
+      }
+      const result = await analyzeDependencies(
+        actions,
+        subgoal.content,
+        mainGoal,
+        planId,
+        language,
+        ticketId,
+      )
+      return result.ok
+        ? { subgoalIndex: index, dependencies: result.data, error: null }
+        : { subgoalIndex: index, dependencies: null, error: result.error }
+    }),
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -319,8 +315,14 @@ export async function readProgressFromText(
   note: string,
   action: { content: string; metric: string | null; current: ProgressValue },
   language: Language,
+  ticketId: string,
 ): Promise<AiResult<ProgressReading>> {
-  const result = await run("progress", progressSchema, progressPrompt(note, action, language))
+  const result = await run(
+    "progress",
+    progressSchema,
+    progressPrompt(note, action, language),
+    ticketId,
+  )
   if (!result.ok) return result
 
   const progress = snapToStage(result.data.progress)
@@ -344,6 +346,7 @@ export async function reviewPlan(
   subgoals: string[],
   actions: string[],
   language: Language,
+  ticketId: string,
 ): Promise<
   AiResult<{
     duplicates: { actions: number[]; note: string }[]
@@ -352,5 +355,11 @@ export async function reviewPlan(
     missing: string[]
   }>
 > {
-  return run("review", reviewSchema, reviewPrompt(mainGoal, subgoals, actions, language))
+  return run(
+    "review",
+    reviewSchema,
+    reviewPrompt(mainGoal, subgoals, actions, language),
+    ticketId,
+  )
 }
+

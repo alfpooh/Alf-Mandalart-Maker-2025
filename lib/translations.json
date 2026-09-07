@@ -183,6 +183,12 @@
         },
         "reassure": "만다라트를 만들 때 쓴 내용 외에 추가로 요구하는 정보는 없습니다."
       }
+    },
+    "queue": {
+      "ahead": "앞에 {n}명이 먼저 생성 중입니다",
+      "turns": "순서대로 처리 중 · {n}개 남음",
+      "why": "AI 사용량 한도를 넘지 않도록 순서대로 처리합니다.",
+      "shared": "다른 사용자와 순서를 나눠 쓰는 중입니다. 곧 이어집니다."
     }
   },
   "en": {
@@ -369,6 +375,12 @@
         },
         "reassure": "Nothing is asked of you beyond what you already wrote."
       }
+    },
+    "queue": {
+      "ahead": "{n} ahead of you",
+      "turns": "Taking turns · {n} left",
+      "why": "Requests run in turn so nobody exceeds the AI usage limit.",
+      "shared": "Sharing the queue with someone else right now. Yours continues shortly."
     }
   },
   "fi": {
@@ -555,6 +567,12 @@
         },
         "reassure": "Sinulta ei kysytä mitään muuta kuin mitä jo kirjoitit."
       }
+    },
+    "queue": {
+      "ahead": "{n} edelläsi",
+      "turns": "Vuorotellen · {n} jäljellä",
+      "why": "Pyynnöt ajetaan vuorotellen, jottei käyttöraja ylity.",
+      "shared": "Jono on juuri nyt jaettu toisen kanssa. Omasi jatkuu pian."
     }
   }
 }

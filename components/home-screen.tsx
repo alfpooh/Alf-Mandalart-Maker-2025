@@ -9,6 +9,7 @@ import { RecentDrafts } from "@/components/recent-drafts"
 import { generateSubgoals } from "@/lib/actions"
 import { useLanguage } from "@/lib/language-context"
 import { createPlan, type SessionInfo } from "@/lib/plans"
+import { newTicket } from "@/lib/ticket"
 import {
   createDraftWithId,
   listDrafts,
@@ -25,6 +26,7 @@ export function HomeScreen({ session }: { session: SessionInfo }) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<EditorDraft[]>([])
+  const [ticket, setTicket] = useState<string | null>(null)
 
   useEffect(() => {
     purgeExpiredDrafts()
@@ -45,7 +47,10 @@ export function HomeScreen({ session }: { session: SessionInfo }) {
       return
     }
 
-    const result = await generateSubgoals(goal, language)
+    // One ticket for this run, so the queue can report where it stands.
+    const ticket = newTicket()
+    setTicket(ticket)
+    const result = await generateSubgoals(goal, language, ticket)
     if (!result.ok) {
       setError(result.error)
       setIsLoading(false)
@@ -80,6 +85,7 @@ export function HomeScreen({ session }: { session: SessionInfo }) {
         onGoalSubmit={handleGoalSubmit}
         isLoading={isLoading}
         error={error ? t(error) : null}
+        ticketId={isLoading ? ticket : null}
       />
 
       {drafts.length > 0 && !isLoading && (

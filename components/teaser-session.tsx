@@ -8,6 +8,7 @@ import { MandalartGrid } from "@/components/mandalart-grid"
 import { signInWithGoogle } from "@/lib/auth-actions"
 import { track } from "@/lib/analytics"
 import { readProgressFromText } from "@/lib/actions"
+import { newTicket } from "@/lib/ticket"
 import { useLanguage } from "@/lib/language-context"
 import {
   draftActions,
@@ -210,6 +211,7 @@ function ProgressStep({ draft }: { draft: EditorDraft }) {
       note,
       { content: action.content, metric: action.metric, current: 0 },
       draft.language,
+      newTicket(),
     )
     if (outcome.ok) setResult(outcome.data)
     else setError(outcome.error)

@@ -3,11 +3,13 @@
 import { Check, Loader2 } from "lucide-react"
 
 import { useLanguage } from "@/lib/language-context"
+import { QueueNotice } from "@/components/queue-notice"
 import { ACTIONS_PER_SUBGOAL, type EditorCell } from "@/lib/types"
 
 interface GeneratingActionsProps {
   subgoals: EditorCell[]
   actions: Record<string, EditorCell[]>
+  ticketId?: string | null
 }
 
 /**
@@ -17,7 +19,11 @@ interface GeneratingActionsProps {
  * area landing as it arrives — a spinner over a blank screen gave no sense of
  * whether anything was happening or how much was left.
  */
-export function GeneratingActions({ subgoals, actions }: GeneratingActionsProps) {
+export function GeneratingActions({
+  subgoals,
+  actions,
+  ticketId = null,
+}: GeneratingActionsProps) {
   const { t } = useLanguage()
   const done = subgoals.filter((s) => (actions[s.id]?.length ?? 0) > 0).length
 
@@ -32,6 +38,12 @@ export function GeneratingActions({ subgoals, actions }: GeneratingActionsProps)
             {done} / {subgoals.length} {t("generating.progress")}
           </p>
         </div>
+
+        {ticketId && (
+          <div className="mb-6">
+            <QueueNotice ticketId={ticketId} />
+          </div>
+        )}
 
         <ul className="space-y-2">
           {subgoals.map((subgoal) => {

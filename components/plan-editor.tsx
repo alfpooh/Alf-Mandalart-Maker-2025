@@ -8,7 +8,7 @@ import { DetailedActionsReview } from "@/components/detailed-actions-review"
 import { GeneratingActions } from "@/components/generating-actions"
 import { MandalartVisualization } from "@/components/mandalart-visualization"
 import { SubgoalReview } from "@/components/subgoal-review"
-import { analyzeAllDependencies, generateAllActions } from "@/lib/actions"
+import { analyzeDependencies, generateActionsForSubgoal } from "@/lib/actions"
 import { useLanguage } from "@/lib/language-context"
 import {
   confirmAllActions,
@@ -24,6 +24,7 @@ import {
 } from "@/lib/store/local-drafts"
 import type { EditorDraft } from "@/lib/types"
 import type { SessionInfo } from "@/lib/plans"
+import { newTicket } from "@/lib/ticket"
 import { TeaserSession } from "@/components/teaser-session"
 import { markTeaserSeen, wasTeaserSeen } from "@/lib/store/local-drafts"
 
@@ -44,6 +45,7 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
   const [failures, setFailures] = useState<number[]>([])
   const [analyzed, setAnalyzed] = useState<Set<string>>(new Set())
   const [showTeaser, setShowTeaser] = useState(false)
+  const [ticket, setTicket] = useState<string | null>(null)
 
   // The teaser runs once a plan is finished, only for people who do not yet
   // have the features it shows, and only once per plan — a wall on every visit
@@ -68,81 +70,103 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
   }, [])
 
   /**
-   * Applies generated actions onto the *current* draft, not the one captured
-   * when generation started.
+   * Generates each area separately and merges it the moment it lands.
    *
-   * A rate-limited call retries for a while, so results can land long after
-   * the request went out. Merging them into a stale snapshot silently discards
-   * whatever changed meanwhile — including earlier areas from the same batch,
-   * which is how a run that produced six areas ended up storing one.
+   * The eight requests go out together and the shared queue decides how many
+   * actually run; merging per area means the screen fills in as work completes
+   * rather than jumping from 0/8 to 8/8 after a minute of nothing.
+   *
+   * Each merge folds into the *current* draft, never the one captured when
+   * generation started: a retried call can land long afterwards, and merging
+   * into a stale snapshot silently drops everything saved meanwhile.
    */
   const runActionGeneration = useCallback(
-    async (subgoals: string[], mainGoal: string, language: EditorDraft["language"]) => {
-      const results = await generateAllActions(subgoals, mainGoal, language)
+    async (started: EditorDraft, ticketId: string) => {
+      const contents = started.subgoals.map((s) => s.content)
+      const failed: number[] = []
 
-      setDraft((latest) => {
-        if (!latest) return latest
-        let next = latest
-        const failed: number[] = []
-        for (const result of results) {
-          const subgoal = latest.subgoals[result.subgoalIndex]
-          if (!subgoal) continue
-          if (result.actions) next = withActions(next, subgoal.id, result.actions)
-          else failed.push(result.subgoalIndex)
-        }
-        setFailures(failed)
-        // Areas that failed can be retried on their own; the rest are usable.
-        return saveDraft({ ...next, step: "review-actions" })
-      })
+      await Promise.all(
+        started.subgoals.map(async (subgoal, index) => {
+          const siblings = contents.filter((_, i) => i !== index)
+          const result = await generateActionsForSubgoal(
+            subgoal.content,
+            started.mainGoal,
+            siblings,
+            started.language,
+            ticketId,
+          )
+
+          if (!result.ok) {
+            failed.push(index)
+            setFailures((current) => [...current, index])
+            return
+          }
+          setDraft((latest) =>
+            latest ? saveDraft(withActions(latest, subgoal.id, result.data)) : latest,
+          )
+        }),
+      )
+
+      // Areas that failed can be retried on their own; the rest are usable.
+      setFailures(failed)
+      setDraft((latest) => (latest ? saveDraft({ ...latest, step: "review-actions" }) : latest))
     },
     [],
   )
 
-  // Kicking work off from inside a state updater runs it twice under React's
-  // development double-invoke, which doubles the API calls.
   const handleGenerateActions = useCallback(() => {
     if (!draft) return
     const started = saveDraft({ ...draft, step: "generating-actions" })
     setDraft(started)
-    void runActionGeneration(
-      started.subgoals.map((s) => s.content),
-      started.mainGoal,
-      started.language,
-    )
+    setFailures([])
+    const id = newTicket()
+    setTicket(id)
+    void runActionGeneration(started, id)
   }, [draft, runActionGeneration])
 
-  const runOrderAnalysis = useCallback(async (current: EditorDraft) => {
-    const subgoals = current.subgoals.map((s) => ({ id: s.id, content: s.content }))
-    const actions = Object.fromEntries(
-      current.subgoals.map((s) => [
-        s.id,
-        (current.actions[s.id] ?? []).map((a) => ({ id: a.id, content: a.content })),
-      ]),
+  /** Same shape as action generation: per area, merged as each one lands. */
+  const runOrderAnalysis = useCallback(async (current: EditorDraft, ticketId: string) => {
+    await Promise.all(
+      current.subgoals.map(async (subgoal) => {
+        const actions = (current.actions[subgoal.id] ?? []).map((a) => ({
+          id: a.id,
+          content: a.content,
+        }))
+        if (actions.length === 0) {
+          setAnalyzed((done) => new Set(done).add(subgoal.id))
+          return
+        }
+
+        const result = await analyzeDependencies(
+          actions,
+          subgoal.content,
+          current.mainGoal,
+          current.id,
+          current.language,
+          ticketId,
+        )
+
+        setAnalyzed((done) => new Set(done).add(subgoal.id))
+        if (!result.ok) return
+        setDraft((latest) =>
+          latest
+            ? saveDraft(withDependencies(latest, [...latest.dependencies, ...result.data]))
+            : latest,
+        )
+      }),
     )
 
-    const results = await analyzeAllDependencies(
-      subgoals,
-      actions,
-      current.mainGoal,
-      current.id,
-      current.language,
-    )
-
-    const edges = results.flatMap((r) => r.dependencies ?? [])
-    setAnalyzed(new Set(current.subgoals.map((s) => s.id)))
-    // Merged onto the latest draft, for the same reason as action generation.
-    setDraft((latest) =>
-      latest
-        ? saveDraft({ ...withDependencies(latest, edges), step: "visualization" })
-        : latest,
-    )
+    setDraft((latest) => (latest ? saveDraft({ ...latest, step: "visualization" }) : latest))
   }, [])
 
   const handleFinishReview = useCallback(() => {
     if (!draft) return
     const started = saveDraft({ ...draft, step: "analyzing-order" })
     setDraft(started)
-    void runOrderAnalysis(started)
+    setAnalyzed(new Set())
+    const id = newTicket()
+    setTicket(id)
+    void runOrderAnalysis(started, id)
   }, [draft, runOrderAnalysis])
 
   if (status === "loading") {
@@ -184,11 +208,17 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
   }
 
   if (draft.step === "analyzing-order") {
-    return <AnalyzingOrder subgoals={draft.subgoals} done={analyzed} />
+    return <AnalyzingOrder subgoals={draft.subgoals} done={analyzed} ticketId={ticket} />
   }
 
   if (draft.step === "generating-actions") {
-    return <GeneratingActions subgoals={draft.subgoals} actions={draft.actions} />
+    return (
+      <GeneratingActions
+        subgoals={draft.subgoals}
+        actions={draft.actions}
+        ticketId={ticket}
+      />
+    )
   }
 
   if (draft.step === "review-actions") {

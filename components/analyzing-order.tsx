@@ -3,6 +3,7 @@
 import { Check, Loader2 } from "lucide-react"
 
 import { useLanguage } from "@/lib/language-context"
+import { QueueNotice } from "@/components/queue-notice"
 import type { EditorCell } from "@/lib/types"
 
 /**
@@ -14,9 +15,11 @@ import type { EditorCell } from "@/lib/types"
 export function AnalyzingOrder({
   subgoals,
   done,
+  ticketId = null,
 }: {
   subgoals: EditorCell[]
   done: Set<string>
+  ticketId?: string | null
 }) {
   const { t } = useLanguage()
 
@@ -29,6 +32,12 @@ export function AnalyzingOrder({
             {done.size} / {subgoals.length} {t("generating.progress")}
           </p>
         </div>
+
+        {ticketId && (
+          <div className="mb-6">
+            <QueueNotice ticketId={ticketId} />
+          </div>
+        )}
 
         <ul className="space-y-2">
           {subgoals.map((subgoal) => {
