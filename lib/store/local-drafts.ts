@@ -22,6 +22,7 @@ import { breakCycles } from "../graph"
 
 const INDEX_KEY = "mandalart.drafts"
 const TOKEN_KEY = "mandalart.draftToken"
+const TEASER_KEY = "mandalart.teaserSeen"
 const DRAFT_PREFIX = "mandalart.draft."
 
 /** Drafts older than this are cleared, matching the 24h server-side draft TTL. */
@@ -317,5 +318,45 @@ export function removeDependency(
     dependencies: draft.dependencies.filter(
       (edge) => !(edge.actionId === actionId && edge.dependsOnId === dependsOnId),
     ),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Teaser
+// ---------------------------------------------------------------------------
+
+/**
+ * Which plans have already shown the sign-up walkthrough.
+ *
+ * Kept per plan rather than globally: someone who dismissed it once should not
+ * see it again for that Mandalart, but a second plan is a fresh moment worth
+ * asking at. Failing to read this shows the teaser again, which is the
+ * harmless direction to fail in.
+ */
+export function wasTeaserSeen(planId: string): boolean {
+  const store = storage()
+  if (!store) return false
+  try {
+    const raw = store.getItem(TEASER_KEY)
+    const seen = raw ? (JSON.parse(raw) as unknown) : []
+    return Array.isArray(seen) && seen.includes(planId)
+  } catch {
+    return false
+  }
+}
+
+export function markTeaserSeen(planId: string): void {
+  const store = storage()
+  if (!store) return
+  try {
+    const raw = store.getItem(TEASER_KEY)
+    const seen = raw ? (JSON.parse(raw) as unknown) : []
+    const list = Array.isArray(seen) ? seen.filter((id) => typeof id === "string") : []
+    if (!list.includes(planId)) {
+      // Keep the tail bounded; old ids stop mattering once the draft expires.
+      store.setItem(TEASER_KEY, JSON.stringify([planId, ...list].slice(0, 50)))
+    }
+  } catch {
+    /* nothing useful to do */
   }
 }

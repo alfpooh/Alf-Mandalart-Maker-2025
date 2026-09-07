@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Download, Printer, FileText } from "lucide-react"
+import { Download, Printer, FileText, Lock } from "lucide-react"
+import { track } from "@/lib/analytics"
 import html2canvas from "html2canvas"
 import jsPDF from "jspdf"
 
@@ -23,6 +24,9 @@ interface MandalartVisualizationProps {
   onUpdateSubgoal?: (index: number, content: string) => void
   onUpdateAction?: (subgoalId: string, actionIndex: number, content: string) => void
   onRemoveDependency?: (actionId: string, dependsOnId: string) => void
+  /** True for visitors without an account: exports are account-only. */
+  locked?: boolean
+  onShowTeaser?: () => void
 }
 
 interface CellData {
@@ -43,6 +47,8 @@ export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({
   onUpdateSubgoal,
   onUpdateAction,
   onRemoveDependency,
+  locked = false,
+  onShowTeaser,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCell, setEditingCell] = useState<CellData | null>(null)
@@ -382,18 +388,44 @@ END OF DOCUMENT
               <Button onClick={onBack} variant="outline">
                 {t("visualization.back")}
               </Button>
-              <Button onClick={downloadTXT} className="flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                {t("visualization.txtDownload")}
-              </Button>
-              <Button onClick={handlePrint} className="flex items-center gap-2">
-                <Printer className="w-4 h-4" />
-                {t("visualization.print")}
-              </Button>
-              <Button onClick={downloadPDF} disabled={isGeneratingPDF} className="flex items-center gap-2">
-                <Download className="w-4 h-4" />
-                {isGeneratingPDF ? t("visualization.pdfGenerating") : t("visualization.pdfDownload")}
-              </Button>
+
+              {locked ? (
+                // Downloads are an account feature. Rather than hiding them,
+                // show what exists and say what opens it — a hidden feature
+                // gives nobody a reason to sign in.
+                <Button
+                  onClick={() => {
+                    track("export_blocked")
+                    onShowTeaser?.()
+                  }}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <Lock className="w-4 h-4" />
+                  {t("visualization.exportsLocked")}
+                </Button>
+              ) : (
+                <>
+                  <Button onClick={downloadTXT} className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    {t("visualization.txtDownload")}
+                  </Button>
+                  <Button onClick={handlePrint} className="flex items-center gap-2">
+                    <Printer className="w-4 h-4" />
+                    {t("visualization.print")}
+                  </Button>
+                  <Button
+                    onClick={downloadPDF}
+                    disabled={isGeneratingPDF}
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    {isGeneratingPDF
+                      ? t("visualization.pdfGenerating")
+                      : t("visualization.pdfDownload")}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 

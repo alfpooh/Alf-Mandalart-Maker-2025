@@ -71,7 +71,8 @@
         "action": "액션 아이템",
         "cell": "셀"
       },
-      "back": "뒤로"
+      "back": "뒤로",
+      "exportsLocked": "내보내기 (계정 필요)"
     },
     "generating": {
       "title": "각 영역의 액션을 만들고 있습니다",
@@ -142,6 +143,46 @@
       "blockedTitle": "다른 항목을 기다리는 {n}가지",
       "waitsFor": "대기:",
       "unlink": "이 선후관계 해제"
+    },
+    "teaser": {
+      "close": "닫기",
+      "back": "이전",
+      "next": "다음",
+      "later": "나중에",
+      "order": {
+        "title": "지금 바로 시작할 수 있는 것",
+        "body": "64개를 한꺼번에 보면 아무것도 시작하지 못합니다. 선후관계를 분석해 오늘 착수 가능한 것만 앞에 세웠습니다."
+      },
+      "tracking": {
+        "title": "같은 그림 위에서 진행 확인",
+        "body": "별도 대시보드가 아니라, 방금 만든 그 9×9 위에 진행률이 얹힙니다. 어느 영역이 방치되는지 한눈에 드러납니다.",
+        "sampleNotice": "아래 진행률은 기능을 보여주기 위한 예시입니다. 실제 계획은 그대로입니다."
+      },
+      "progress": {
+        "title": "문장으로 적으면 퍼센트로",
+        "body": "퍼센트를 고르는 대신 무슨 일이 있었는지 쓰면 됩니다. 실제로 한 번 해보세요 — 아래는 방금 만든 실행 항목입니다.",
+        "label": "진행 상황을 적어보세요",
+        "example": "자료조사는 끝냈고 초안을 절반쯤 썼습니다.",
+        "convert": "퍼센트로 변환",
+        "converting": "변환 중...",
+        "youDecide": "AI는 제안만 합니다. 기록은 늘 본인이 확정합니다."
+      },
+      "export": {
+        "title": "발표하고 공유하기",
+        "body": "완성한 만다라트를 PDF·인쇄물로 내보내고 링크로 공유할 수 있습니다.",
+        "locked": "계정이 필요합니다"
+      },
+      "signin": {
+        "title": "계정을 만들면",
+        "body": "지금까지 만든 만다라트가 그대로 옮겨집니다.",
+        "benefit": {
+          "keep": "이 만다라트가 영구 저장됩니다 (지금은 24시간 후 사라집니다)",
+          "order": "실행 순서를 언제든 다시 확인할 수 있습니다",
+          "track": "진행 상황을 기록하고 정체된 영역을 알려줍니다",
+          "export": "PDF·인쇄·공유 링크가 열립니다"
+        },
+        "reassure": "만다라트를 만들 때 쓴 내용 외에 추가로 요구하는 정보는 없습니다."
+      }
     }
   },
   "en": {
@@ -216,7 +257,8 @@
         "action": "Action Item",
         "cell": "Cell"
       },
-      "back": "Back"
+      "back": "Back",
+      "exportsLocked": "Exports (account)"
     },
     "generating": {
       "title": "Filling in the actions for each area",
@@ -287,6 +329,46 @@
       "blockedTitle": "{n} waiting on something else",
       "waitsFor": "Waits for:",
       "unlink": "Remove this prerequisite"
+    },
+    "teaser": {
+      "close": "Close",
+      "back": "Back",
+      "next": "Next",
+      "later": "Maybe later",
+      "order": {
+        "title": "What you can start today",
+        "body": "Sixty-four at once is why plans never begin. These have nothing in front of them."
+      },
+      "tracking": {
+        "title": "Progress on the same picture",
+        "body": "Not a separate dashboard — progress sits on the very grid you just built, so a neglected area is visible at a glance.",
+        "sampleNotice": "The figures below are an example, to show how it looks. Your plan is unchanged."
+      },
+      "progress": {
+        "title": "Write a sentence, get a percentage",
+        "body": "Instead of picking a number, say what happened. Try it — this is one of your own actions.",
+        "label": "Describe your progress",
+        "example": "I've finished the research and written about half the draft.",
+        "convert": "Convert to a percentage",
+        "converting": "Converting...",
+        "youDecide": "The model only proposes. You always confirm what gets recorded."
+      },
+      "export": {
+        "title": "Present it and share it",
+        "body": "Export the finished Mandalart as a PDF or a printout, and share it by link.",
+        "locked": "Needs an account"
+      },
+      "signin": {
+        "title": "With an account",
+        "body": "The Mandalart you just made comes with you.",
+        "benefit": {
+          "keep": "This Mandalart is kept for good (right now it goes in 24 hours)",
+          "order": "Come back to the running order whenever you like",
+          "track": "Record progress and get told which areas have stalled",
+          "export": "PDF, printing and share links open up"
+        },
+        "reassure": "Nothing is asked of you beyond what you already wrote."
+      }
     }
   },
   "fi": {
@@ -361,7 +443,8 @@
         "action": "Toimi",
         "cell": "Solu"
       },
-      "back": "Takaisin"
+      "back": "Takaisin",
+      "exportsLocked": "Vienti (tili)"
     },
     "generating": {
       "title": "Luodaan toimenpiteitä jokaiselle alueelle",
@@ -432,6 +515,46 @@
       "blockedTitle": "{n} odottaa jotain muuta",
       "waitsFor": "Odottaa:",
       "unlink": "Poista tämä edellytys"
+    },
+    "teaser": {
+      "close": "Sulje",
+      "back": "Takaisin",
+      "next": "Seuraava",
+      "later": "Ehkä myöhemmin",
+      "order": {
+        "title": "Mitä voit aloittaa tänään",
+        "body": "Kuusikymmentäneljä kerralla on syy siihen, ettei suunnitelmia aloiteta. Näiden edessä ei ole mitään."
+      },
+      "tracking": {
+        "title": "Edistyminen samassa kuvassa",
+        "body": "Ei erillistä näkymää — edistyminen näkyy juuri rakentamassasi ruudukossa, joten laiminlyöty alue erottuu heti.",
+        "sampleNotice": "Alla olevat luvut ovat esimerkki. Suunnitelmasi on ennallaan."
+      },
+      "progress": {
+        "title": "Kirjoita lause, saat prosentin",
+        "body": "Numeron valitsemisen sijaan kerro mitä tapahtui. Kokeile — tämä on yksi omista toimenpiteistäsi.",
+        "label": "Kuvaile edistymistäsi",
+        "example": "Taustatyö on tehty ja luonnoksesta on noin puolet kirjoitettu.",
+        "convert": "Muunna prosentiksi",
+        "converting": "Muunnetaan...",
+        "youDecide": "Malli vain ehdottaa. Sinä vahvistat aina mitä kirjataan."
+      },
+      "export": {
+        "title": "Esittele ja jaa",
+        "body": "Vie valmis Mandalart PDF:nä tai tulosteena ja jaa se linkillä.",
+        "locked": "Vaatii tilin"
+      },
+      "signin": {
+        "title": "Tilin kanssa",
+        "body": "Juuri tekemäsi Mandalart siirtyy mukanasi.",
+        "benefit": {
+          "keep": "Tämä Mandalart säilyy pysyvästi (nyt se katoaa 24 tunnissa)",
+          "order": "Palaa suoritusjärjestykseen milloin tahansa",
+          "track": "Kirjaa edistymistä ja saa tiedon pysähtyneistä alueista",
+          "export": "PDF, tulostus ja jakolinkit avautuvat"
+        },
+        "reassure": "Sinulta ei kysytä mitään muuta kuin mitä jo kirjoitit."
+      }
     }
   }
 }
