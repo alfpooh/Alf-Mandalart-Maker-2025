@@ -1,6 +1,8 @@
 "use client"
 
 import type React from "react"
+import type { EditorDraft } from "@/lib/types"
+import { useLanguage } from "@/lib/language-context"
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -10,14 +12,9 @@ import { Download, Printer, FileText } from "lucide-react"
 import html2canvas from "html2canvas"
 import jsPDF from "jspdf"
 
-interface MandalartData {
-  mainGoal: { id: string; content: string; isConfirmed: boolean; isEditing: boolean }
-  subgoals: { id: string; content: string; isConfirmed: boolean; isEditing: boolean }[]
-  detailedActions: { [subgoalId: string]: { id: string; content: string; isConfirmed: boolean; isEditing: boolean }[] }
-}
-
 interface MandalartVisualizationProps {
-  data: MandalartData
+  draft: EditorDraft
+  onBack: () => void
   onRestart: () => void
   onUpdateMainGoal?: (content: string) => void
   onUpdateSubgoal?: (index: number, content: string) => void
@@ -35,7 +32,8 @@ interface CellData {
 }
 
 export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({
-  data,
+  draft,
+  onBack,
   onRestart,
   onUpdateMainGoal,
   onUpdateSubgoal,
@@ -46,6 +44,15 @@ export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({
   const [editContent, setEditContent] = useState("")
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
   const printContentRef = useRef<HTMLDivElement>(null)
+  const { t } = useLanguage()
+
+  // Phase 1 rebuilds this grid; until then the draft is shaped to what the
+  // existing render already expects rather than rewriting 600 lines twice.
+  const data = {
+    mainGoal: { id: "main", content: draft.mainGoal, isConfirmed: true, isEditing: false },
+    subgoals: draft.subgoals,
+    detailedActions: draft.actions,
+  }
 
   // Color scheme for different sections
   const colors = {
@@ -466,19 +473,22 @@ END OF DOCUMENT
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 flex flex-col items-center">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center mb-6 no-print">
-            <h2 className="text-3xl font-bold">Mandalart Visualization</h2>
+            <h2 className="text-3xl font-bold">{t("visualization.title")}</h2>
             <div className="flex gap-2">
+              <Button onClick={onBack} variant="outline">
+                {t("visualization.back")}
+              </Button>
               <Button onClick={downloadTXT} className="flex items-center gap-2">
                 <FileText className="w-4 h-4" />
-                TXT 다운로드
+                {t("visualization.txtDownload")}
               </Button>
               <Button onClick={handlePrint} className="flex items-center gap-2">
                 <Printer className="w-4 h-4" />
-                인쇄하기
+                {t("visualization.print")}
               </Button>
               <Button onClick={downloadPDF} disabled={isGeneratingPDF} className="flex items-center gap-2">
                 <Download className="w-4 h-4" />
-                {isGeneratingPDF ? "PDF 생성 중..." : "PDF 다운로드"}
+                {isGeneratingPDF ? t("visualization.pdfGenerating") : t("visualization.pdfDownload")}
               </Button>
             </div>
           </div>
@@ -493,7 +503,7 @@ END OF DOCUMENT
 
             {/* Legend */}
             <div className="mb-6 p-4 bg-white rounded-lg shadow-sm">
-              <h3 className="text-lg font-semibold mb-3 text-center">Color Legend</h3>
+              <h3 className="text-lg font-semibold mb-3 text-center">{t("visualization.colorLegend")}</h3>
               <div className="flex flex-wrap justify-center gap-4 text-sm">
                 <div className="flex items-center gap-2">
                   <div className={`w-4 h-4 rounded ${colors.mainGoal}`}></div>
@@ -509,7 +519,7 @@ END OF DOCUMENT
                 </div>
               </div>
               <p className="text-center text-sm text-gray-600 mt-2 no-print">
-                Click on any cell to view details and edit
+                {t("visualization.clickToEdit")}
               </p>
             </div>
 
@@ -533,11 +543,11 @@ END OF DOCUMENT
 
             {/* Detailed Content */}
             <div className="bg-white p-6 rounded-lg shadow-sm print-details">
-              <h2 className="text-xl font-bold text-center mb-6">📝 상세 내용</h2>
+              <h2 className="text-xl font-bold text-center mb-6">{t("visualization.detailedContent")}</h2>
 
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-lg font-bold text-indigo-600 mb-2">🎯 메인 목표</h3>
+                  <h3 className="text-lg font-bold text-indigo-600 mb-2">{t("visualization.mainGoalLabel")}</h3>
                   <div className="pl-4 border-l-4 border-indigo-200 bg-indigo-50 p-3 rounded">
                     <p className="text-gray-800">{data.mainGoal.content}</p>
                   </div>
@@ -553,7 +563,7 @@ END OF DOCUMENT
 
                     {data.detailedActions[subgoal.id] && data.detailedActions[subgoal.id].length > 0 && (
                       <div className="pl-4">
-                        <h4 className="text-sm font-semibold text-gray-600 mb-2">액션 아이템:</h4>
+                        <h4 className="text-sm font-semibold text-gray-600 mb-2">{t("visualization.actionsLabel")}</h4>
                         <div className="space-y-1">
                           {data.detailedActions[subgoal.id].map((action, actionIndex) => (
                             <div key={`action-${action.id}`} className="flex items-start text-sm text-gray-700">
@@ -629,7 +639,7 @@ END OF DOCUMENT
               onClick={onRestart}
               className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors"
             >
-              Restart
+              {t("visualization.restart")}
             </button>
           </div>
         </div>
@@ -640,13 +650,13 @@ END OF DOCUMENT
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Badge variant="outline">{getCellTypeLabel(editingCell?.type || "")}</Badge>
-                Edit Content
+                {t("visualization.editContent")}
               </DialogTitle>
             </DialogHeader>
 
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Current Content:</label>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">{t("visualization.currentContent")}</label>
                 {editingCell?.type === "mainGoal" ? (
                   <Textarea
                     value={editContent}
@@ -676,10 +686,10 @@ END OF DOCUMENT
 
             <DialogFooter>
               <Button variant="outline" onClick={handleCancel}>
-                Cancel
+                {t("visualization.cancel")}
               </Button>
               <Button onClick={handleSave} disabled={!editContent.trim()}>
-                Save Changes
+                {t("visualization.saveChanges")}
               </Button>
             </DialogFooter>
           </DialogContent>

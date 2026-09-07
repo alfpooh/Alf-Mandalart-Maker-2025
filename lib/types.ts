@@ -179,15 +179,56 @@ export function subgoalProgress(bundle: PlanBundle, subgoalId: string): number {
 // Editor-only state
 // ---------------------------------------------------------------------------
 
-/** Draft state during the review steps, before anything is persisted. */
-export interface DraftCell {
+/**
+ * A cell as the review screens handle it.
+ *
+ * This is where `isEditing` belongs — it describes a text box, not a goal, and
+ * it never reaches the database.
+ */
+export interface EditorCell {
+  id: string
   content: string
+  metric: string | null
   isConfirmed: boolean
+  isEditing: boolean
 }
 
 export type AppStep =
-  | "input"
   | "review-subgoals"
   | "generating-actions"
   | "review-actions"
   | "visualization"
+
+/**
+ * A Mandalart being built, as saved to the browser between steps.
+ *
+ * Actions are keyed by the id of their subgoal cell. This is the shape that
+ * survives a refresh today; once Supabase is wired it becomes the local mirror
+ * of a `plans` row rather than the only copy.
+ */
+export interface EditorDraft {
+  id: string
+  mainGoal: string
+  language: Language
+  step: AppStep
+  subgoals: EditorCell[]
+  actions: Record<string, EditorCell[]>
+  createdAt: string
+  updatedAt: string
+}
+
+/** Every action across every subgoal, in subgoal order. */
+export function draftActions(draft: EditorDraft): EditorCell[] {
+  return draft.subgoals.flatMap((subgoal) => draft.actions[subgoal.id] ?? [])
+}
+
+/** True once all eight subgoals and all sixty-four actions are confirmed. */
+export function isDraftComplete(draft: EditorDraft): boolean {
+  const actions = draftActions(draft)
+  return (
+    draft.subgoals.length === SUBGOAL_COUNT &&
+    draft.subgoals.every((s) => s.isConfirmed) &&
+    actions.length === TOTAL_ACTIONS &&
+    actions.every((a) => a.isConfirmed)
+  )
+}

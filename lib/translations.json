@@ -20,14 +20,23 @@
       "save": "저장",
       "confirmed": "확인됨",
       "edit": "편집",
-      "generateActions": "상세 액션 생성하기"
+      "generateActions": "상세 액션 생성하기",
+      "confirm": "확정"
     },
     "detailedActions": {
       "title": "상세 액션 검토하기",
       "mainGoal": "메인 목표:",
       "progress": "개 액션 확인됨",
       "acceptAll": "모든 액션 확인",
-      "generating": "각 서브목표에 대한 상세 액션 생성 중..."
+      "generating": "각 서브목표에 대한 상세 액션 생성 중...",
+      "failed": "개 영역의 생성이 실패했습니다",
+      "retry": "다시 시도",
+      "empty": "아직 액션이 없습니다",
+      "action": "액션",
+      "metric": "측정 기준",
+      "save": "저장",
+      "edit": "수정",
+      "complete": "만다라트 완성하기"
     },
     "visualization": {
       "title": "만다라트 시각화",
@@ -61,6 +70,47 @@
         "subgoal": "서브목표",
         "action": "액션 아이템",
         "cell": "셀"
+      },
+      "back": "뒤로"
+    },
+    "generating": {
+      "title": "각 영역의 액션을 만들고 있습니다",
+      "progress": "영역 완료"
+    },
+    "drafts": {
+      "title": "작성 중인 만다라트",
+      "delete": "삭제",
+      "note": "이 기기의 브라우저에만 저장되며 24시간 후 사라집니다.",
+      "step": {
+        "review-subgoals": "서브목표 검토 중",
+        "generating-actions": "액션 생성 중",
+        "review-actions": "액션 검토 중",
+        "visualization": "완성"
+      }
+    },
+    "plan": {
+      "notFound": {
+        "title": "만다라트를 찾을 수 없습니다",
+        "body": "만료되었거나 다른 기기에서 만든 것일 수 있습니다. 저장은 아직 이 브라우저에만 이루어집니다.",
+        "start": "새로 시작하기"
+      }
+    },
+    "ai": {
+      "error": {
+        "timeout": "응답이 너무 오래 걸립니다. 다시 시도해 주세요.",
+        "rateLimit": "요청이 몰리고 있습니다. 잠시 후 다시 시도해 주세요.",
+        "malformed": "AI 응답을 읽지 못했습니다. 다시 시도해 주세요.",
+        "generic": "생성에 실패했습니다. 다시 시도해 주세요."
+      }
+    },
+    "progress": {
+      "stage": {
+        "0": "미착수",
+        "10": "착수",
+        "25": "진행",
+        "50": "절반",
+        "75": "마무리",
+        "100": "완료"
       }
     }
   },
@@ -85,14 +135,23 @@
       "save": "Save",
       "confirmed": "Confirmed",
       "edit": "Edit",
-      "generateActions": "Generate Detailed Actions"
+      "generateActions": "Generate Detailed Actions",
+      "confirm": "Confirm"
     },
     "detailedActions": {
       "title": "Review Detailed Actions",
       "mainGoal": "Main Goal:",
       "progress": "Actions Confirmed",
       "acceptAll": "Accept All Actions",
-      "generating": "Generating detailed actions for each subgoal..."
+      "generating": "Generating detailed actions for each subgoal...",
+      "failed": "area(s) failed to generate",
+      "retry": "Try again",
+      "empty": "No actions yet",
+      "action": "Action",
+      "metric": "Metric",
+      "save": "Save",
+      "edit": "Edit",
+      "complete": "Finish Mandalart"
     },
     "visualization": {
       "title": "Mandalart Visualization",
@@ -126,6 +185,47 @@
         "subgoal": "Subgoal",
         "action": "Action Item",
         "cell": "Cell"
+      },
+      "back": "Back"
+    },
+    "generating": {
+      "title": "Filling in the actions for each area",
+      "progress": "areas done"
+    },
+    "drafts": {
+      "title": "Mandalarts in progress",
+      "delete": "Delete",
+      "note": "Saved only in this browser, and cleared after 24 hours.",
+      "step": {
+        "review-subgoals": "Reviewing areas",
+        "generating-actions": "Generating actions",
+        "review-actions": "Reviewing actions",
+        "visualization": "Complete"
+      }
+    },
+    "plan": {
+      "notFound": {
+        "title": "Mandalart not found",
+        "body": "It may have expired, or been made on another device. Plans are still saved only in this browser.",
+        "start": "Start a new one"
+      }
+    },
+    "ai": {
+      "error": {
+        "timeout": "That took too long. Please try again.",
+        "rateLimit": "Too many requests right now. Please try again shortly.",
+        "malformed": "Couldn't read the AI response. Please try again.",
+        "generic": "Generation failed. Please try again."
+      }
+    },
+    "progress": {
+      "stage": {
+        "0": "Not started",
+        "10": "Started",
+        "25": "Underway",
+        "50": "Halfway",
+        "75": "Nearly done",
+        "100": "Done"
       }
     }
   },
@@ -150,14 +250,23 @@
       "save": "Tallenna",
       "confirmed": "Vahvistettu",
       "edit": "Muokkaa",
-      "generateActions": "Luo yksityiskohtaiset toimet"
+      "generateActions": "Luo yksityiskohtaiset toimet",
+      "confirm": "Vahvista"
     },
     "detailedActions": {
       "title": "Tarkista yksityiskohtaiset toimet",
       "mainGoal": "Päätavoite:",
       "progress": "toimea vahvistettu",
       "acceptAll": "Hyväksy kaikki toimet",
-      "generating": "Luodaan yksityiskohtaisia toimia jokaiselle alatavoitteelle..."
+      "generating": "Luodaan yksityiskohtaisia toimia jokaiselle alatavoitteelle...",
+      "failed": "aluetta epäonnistui",
+      "retry": "Yritä uudelleen",
+      "empty": "Ei vielä toimenpiteitä",
+      "action": "Toimenpide",
+      "metric": "Mittari",
+      "save": "Tallenna",
+      "edit": "Muokkaa",
+      "complete": "Viimeistele Mandalart"
     },
     "visualization": {
       "title": "Mandalart-visualisointi",
@@ -191,6 +300,47 @@
         "subgoal": "Alatavoite",
         "action": "Toimi",
         "cell": "Solu"
+      },
+      "back": "Takaisin"
+    },
+    "generating": {
+      "title": "Luodaan toimenpiteitä jokaiselle alueelle",
+      "progress": "aluetta valmiina"
+    },
+    "drafts": {
+      "title": "Keskeneräiset Mandalartit",
+      "delete": "Poista",
+      "note": "Tallennettu vain tähän selaimeen, poistetaan 24 tunnin kuluttua.",
+      "step": {
+        "review-subgoals": "Alueiden tarkistus",
+        "generating-actions": "Toimenpiteitä luodaan",
+        "review-actions": "Toimenpiteiden tarkistus",
+        "visualization": "Valmis"
+      }
+    },
+    "plan": {
+      "notFound": {
+        "title": "Mandalartia ei löydy",
+        "body": "Se on voinut vanhentua tai olla tehty toisella laitteella. Suunnitelmat tallennetaan toistaiseksi vain tähän selaimeen.",
+        "start": "Aloita uusi"
+      }
+    },
+    "ai": {
+      "error": {
+        "timeout": "Tämä kesti liian kauan. Yritä uudelleen.",
+        "rateLimit": "Pyyntöjä on juuri nyt liikaa. Yritä hetken kuluttua.",
+        "malformed": "Vastauksen lukeminen ei onnistunut. Yritä uudelleen.",
+        "generic": "Luonti epäonnistui. Yritä uudelleen."
+      }
+    },
+    "progress": {
+      "stage": {
+        "0": "Ei aloitettu",
+        "10": "Aloitettu",
+        "25": "Käynnissä",
+        "50": "Puolivälissä",
+        "75": "Lähes valmis",
+        "100": "Valmis"
       }
     }
   }

@@ -13,9 +13,12 @@ import { useLanguage } from "@/lib/language-context"
 interface GoalInputProps {
   onGoalSubmit: (goal: string) => void
   isLoading: boolean
+  /** Message shown when generation failed. The old build silently substituted
+   *  placeholder subgoals here, so a failure looked like a result. */
+  error?: string | null
 }
 
-export function GoalInput({ onGoalSubmit, isLoading }: GoalInputProps) {
+export function GoalInput({ onGoalSubmit, isLoading, error = null }: GoalInputProps) {
   const [goal, setGoal] = useState("")
   const { t } = useLanguage()
 
@@ -61,6 +64,14 @@ export function GoalInput({ onGoalSubmit, isLoading }: GoalInputProps) {
                   disabled={isLoading}
                 />
               </div>
+              {error && (
+                <p
+                  role="alert"
+                  className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+                >
+                  {error}
+                </p>
+              )}
               <Button type="submit" className="w-full text-lg py-6" disabled={!goal.trim() || isLoading}>
                 {isLoading ? t("goalInput.generating") : t("goalInput.generate")}
               </Button>
