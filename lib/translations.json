@@ -72,7 +72,8 @@
         "cell": "셀"
       },
       "back": "뒤로",
-      "exportsLocked": "내보내기 (계정 필요)"
+      "exportsLocked": "내보내기 (계정 필요)",
+      "pdfFailed": "PDF를 만들지 못했습니다. 잠시 후 다시 시도해 주세요."
     },
     "generating": {
       "title": "각 영역의 액션을 만들고 있습니다",
@@ -277,7 +278,8 @@
         "cell": "Cell"
       },
       "back": "Back",
-      "exportsLocked": "Exports (account)"
+      "exportsLocked": "Exports (account)",
+      "pdfFailed": "Couldn't build the PDF. Please try again."
     },
     "generating": {
       "title": "Filling in the actions for each area",
@@ -482,7 +484,8 @@
         "cell": "Solu"
       },
       "back": "Takaisin",
-      "exportsLocked": "Vienti (tili)"
+      "exportsLocked": "Vienti (tili)",
+      "pdfFailed": "PDF:n luonti ei onnistunut. Yritä uudelleen."
     },
     "generating": {
       "title": "Luodaan toimenpiteitä jokaiselle alueelle",

@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { Download, Printer, FileText, Lock } from "lucide-react"
 import { track } from "@/lib/analytics"
 import html2canvas from "html2canvas"
-import jsPDF from "jspdf"
+import { exportPlanPdf } from "@/lib/pdf"
 
 interface MandalartVisualizationProps {
   draft: EditorDraft
@@ -54,7 +54,10 @@ export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({
   const [editingCell, setEditingCell] = useState<CellData | null>(null)
   const [editContent, setEditContent] = useState("")
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+  const [pdfError, setPdfError] = useState<string | null>(null)
   const printContentRef = useRef<HTMLDivElement>(null)
+  // Only the grid goes into the PDF as an image; the rest is written as text.
+  const gridRef = useRef<HTMLDivElement>(null)
   const { t } = useLanguage()
 
   // Phase 1 rebuilds this grid; until then the draft is shaped to what the
@@ -242,100 +245,26 @@ END OF DOCUMENT
   }
 
   const downloadPDF = async () => {
-    if (!printContentRef.current) return
-
     setIsGeneratingPDF(true)
-
+    setPdfError(null)
     try {
-      // Create a new jsPDF instance
-      const pdf = new jsPDF("p", "mm", "a4")
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      const pageHeight = pdf.internal.pageSize.getHeight()
-      const margin = 15
-
-      // Add title
-      pdf.setFontSize(18)
-      pdf.text("Mandalart Goal Planner", pageWidth / 2, margin + 10, { align: "center" })
-
-      // Add date
-      pdf.setFontSize(10)
-      const currentDate = new Date().toLocaleDateString("ko-KR")
-      pdf.text(`Generated: ${currentDate}`, pageWidth / 2, margin + 20, { align: "center" })
-
-      // Capture the chart as image
-      const canvas = await html2canvas(printContentRef.current, {
-        scale: 2,
-        backgroundColor: "#ffffff",
-        useCORS: true,
+      await exportPlanPdf(draft, gridRef.current, {
+        title: t("visualization.title"),
+        generated: t("visualization.generatedDate"),
+        mainGoal: t("visualization.mainGoalLabel"),
+        area: t("subgoalReview.subgoal"),
+        actions: t("visualization.actionsLabel"),
+        metric: t("detailedActions.metric"),
       })
-
-      const imgData = canvas.toDataURL("image/png")
-      const imgWidth = pageWidth - margin * 2
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
-
-      // Add chart image
-      let yPosition = margin + 30
-      if (yPosition + imgHeight > pageHeight - margin) {
-        pdf.addPage()
-        yPosition = margin
-      }
-
-      pdf.addImage(imgData, "PNG", margin, yPosition, imgWidth, imgHeight)
-
-      // Add new page for text content
-      pdf.addPage()
-      yPosition = margin
-
-      // Add main goal
-      pdf.setFontSize(14)
-      pdf.text("Main Goal:", margin, yPosition)
-      yPosition += 8
-      pdf.setFontSize(12)
-      const mainGoalLines = pdf.splitTextToSize(data.mainGoal.content, pageWidth - margin * 2)
-      pdf.text(mainGoalLines, margin, yPosition)
-      yPosition += mainGoalLines.length * 6 + 10
-
-      // Add subgoals and actions
-      data.subgoals.forEach((subgoal, index) => {
-        if (yPosition > pageHeight - 40) {
-          pdf.addPage()
-          yPosition = margin
-        }
-
-        pdf.setFontSize(12)
-        pdf.text(`${index + 1}. ${subgoal.content}`, margin, yPosition)
-        yPosition += 8
-
-        const actions = data.detailedActions[subgoal.id] || []
-        if (actions.length > 0) {
-          pdf.setFontSize(10)
-          actions.forEach((action, actionIndex) => {
-            if (yPosition > pageHeight - 20) {
-              pdf.addPage()
-              yPosition = margin
-            }
-            const actionLines = pdf.splitTextToSize(`  ${actionIndex + 1}. ${action.content}`, pageWidth - margin * 2)
-            pdf.text(actionLines, margin, yPosition)
-            yPosition += actionLines.length * 5
-          })
-        }
-        yPosition += 5
-      })
-
-      const now = new Date()
-      const day = String(now.getDate()).padStart(2, "0")
-      const month = String(now.getMonth() + 1).padStart(2, "0")
-      const year = now.getFullYear()
-      const fileName = `AlfsMandalart_${day}.${month}.${year}.pdf`
-      pdf.save(fileName)
     } catch (error) {
-      console.error("Error generating PDF:", error)
-      alert("PDF 생성 중 오류가 발생했습니다.")
+      // The old code alerted with a hardcoded Korean string regardless of
+      // language, and said nothing about what had failed.
+      console.error("[pdf]", error)
+      setPdfError("visualization.pdfFailed")
     } finally {
       setIsGeneratingPDF(false)
     }
   }
-
 
   const getCellTypeLabel = (type: string) => {
     switch (type) {
@@ -427,6 +356,15 @@ END OF DOCUMENT
                 </>
               )}
             </div>
+
+            {pdfError && (
+              <p
+                role="alert"
+                className="w-full rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-800"
+              >
+                {t(pdfError)}
+              </p>
+            )}
           </div>
 
           {/* Print Content */}
@@ -475,7 +413,7 @@ END OF DOCUMENT
             </div>
 
             {/* Mandalart Chart */}
-            <div className="mb-8 print-chart">
+            <div className="mb-8 print-chart" ref={gridRef}>
               <MandalartGrid draft={draft} onCellClick={handleCellClick} />
             </div>
 
