@@ -11,10 +11,11 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Download, Printer, FileText, Lock } from "lucide-react"
+import { Download, Printer, FileText, Lock, Presentation } from "lucide-react"
 import { track } from "@/lib/analytics"
 import html2canvas from "html2canvas"
 import { exportPlanPdf } from "@/lib/pdf"
+import { exportPlanPptx } from "@/lib/pptx"
 
 interface MandalartVisualizationProps {
   draft: EditorDraft
@@ -54,6 +55,7 @@ export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({
   const [editingCell, setEditingCell] = useState<CellData | null>(null)
   const [editContent, setEditContent] = useState("")
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+  const [isGeneratingPPTX, setIsGeneratingPPTX] = useState(false)
   const [pdfError, setPdfError] = useState<string | null>(null)
   const printContentRef = useRef<HTMLDivElement>(null)
   // Only the grid goes into the PDF as an image; the rest is written as text.
@@ -266,6 +268,29 @@ END OF DOCUMENT
     }
   }
 
+  const downloadPPTX = async () => {
+    setIsGeneratingPPTX(true)
+    setPdfError(null)
+    try {
+      await exportPlanPptx(draft, gridRef.current, {
+        // Screen headings read oddly on a slide: the cover said "Mandalart
+        // visualization" and the grid slide said "Details".
+        deckTitle: t("visualization.pptxDeck"),
+        overview: t("visualization.pptxOverview"),
+        area: t("subgoalReview.subgoal"),
+        metric: t("detailedActions.metric"),
+        readyTitle: t("order.readyTitle"),
+        readyHint: t("order.readyHint"),
+        noDeps: t("visualization.pptxNoOrder"),
+      })
+    } catch (error) {
+      console.error("[pptx]", error)
+      setPdfError("visualization.pptxFailed")
+    } finally {
+      setIsGeneratingPPTX(false)
+    }
+  }
+
   const getCellTypeLabel = (type: string) => {
     switch (type) {
       case "mainGoal":
@@ -342,6 +367,16 @@ END OF DOCUMENT
                   <Button onClick={handlePrint} className="flex items-center gap-2">
                     <Printer className="w-4 h-4" />
                     {t("visualization.print")}
+                  </Button>
+                  <Button
+                    onClick={downloadPPTX}
+                    disabled={isGeneratingPPTX}
+                    className="flex items-center gap-2"
+                  >
+                    <Presentation className="w-4 h-4" />
+                    {isGeneratingPPTX
+                      ? t("visualization.pptxGenerating")
+                      : t("visualization.pptxDownload")}
                   </Button>
                   <Button
                     onClick={downloadPDF}

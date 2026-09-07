@@ -73,7 +73,13 @@
       },
       "back": "뒤로",
       "exportsLocked": "내보내기 (계정 필요)",
-      "pdfFailed": "PDF를 만들지 못했습니다. 잠시 후 다시 시도해 주세요."
+      "pdfFailed": "PDF를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      "pptxDownload": "PPT 다운로드",
+      "pptxGenerating": "PPT 만드는 중...",
+      "pptxFailed": "PPT를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      "pptxNoOrder": "선후관계가 없어 모든 항목을 지금 시작할 수 있습니다.",
+      "pptxDeck": "만다라트 실행 계획",
+      "pptxOverview": "전체 만다라트"
     },
     "generating": {
       "title": "각 영역의 액션을 만들고 있습니다",
@@ -279,7 +285,13 @@
       },
       "back": "Back",
       "exportsLocked": "Exports (account)",
-      "pdfFailed": "Couldn't build the PDF. Please try again."
+      "pdfFailed": "Couldn't build the PDF. Please try again.",
+      "pptxDownload": "PowerPoint",
+      "pptxGenerating": "Building deck...",
+      "pptxFailed": "Couldn't build the deck. Please try again.",
+      "pptxNoOrder": "Nothing depends on anything else — all of it can start now.",
+      "pptxDeck": "Mandalart action plan",
+      "pptxOverview": "The whole Mandalart"
     },
     "generating": {
       "title": "Filling in the actions for each area",
@@ -485,7 +497,13 @@
       },
       "back": "Takaisin",
       "exportsLocked": "Vienti (tili)",
-      "pdfFailed": "PDF:n luonti ei onnistunut. Yritä uudelleen."
+      "pdfFailed": "PDF:n luonti ei onnistunut. Yritä uudelleen.",
+      "pptxDownload": "PowerPoint",
+      "pptxGenerating": "Luodaan esitystä...",
+      "pptxFailed": "Esityksen luonti ei onnistunut. Yritä uudelleen.",
+      "pptxNoOrder": "Mikään ei riipu muusta — kaiken voi aloittaa heti.",
+      "pptxDeck": "Mandalart-toimintasuunnitelma",
+      "pptxOverview": "Koko Mandalart"
     },
     "generating": {
       "title": "Luodaan toimenpiteitä jokaiselle alueelle",
