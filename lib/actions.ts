@@ -2,7 +2,12 @@
 
 import { generateObject } from "ai"
 import type { z } from "zod"
-import { modelFor, TASK_TIMEOUT_MS, type AiTask } from "./ai/models"
+import {
+  modelFor,
+  providerOptionsFor,
+  TASK_TIMEOUT_MS,
+  type AiTask,
+} from "./ai/models"
 import { withSlot } from "./ai/queue"
 import {
   actionsPrompt,
@@ -43,7 +48,7 @@ export type AiResult<T> = { ok: true; data: T } | { ok: false; error: string }
  */
 function isTransient(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error)
-  return /schema|json_validate|does not match|rate.?limit|429|5\d\d/i.test(message)
+  return /schema|json_validate|does not match|empty|rate.?limit|429|5\d\d/i.test(message)
 }
 
 const MAX_ATTEMPTS = 3
@@ -65,6 +70,7 @@ async function run<S extends z.ZodType>(
           model: modelFor(task),
           schema,
           prompt,
+          providerOptions: providerOptionsFor(task),
         // Rate-limit rejections are retryable and the window is short; the
         // SDK's default of 2 gives up while the batch is still contending.
           maxRetries: 5,

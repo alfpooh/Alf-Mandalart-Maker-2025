@@ -119,6 +119,41 @@ export const TASK_TIMEOUT_MS: Record<AiTask, number> = {
   review: 90_000,
 }
 
+/**
+ * How much of the token budget each task may spend on reasoning.
+ *
+ * gpt-oss thinks before it answers, and the thinking is billed and capped
+ * together with the answer. Left at its default, a generation call sometimes
+ * spends the lot on reasoning and returns an empty body, which the API rejects
+ * as `json_validate_failed` with `failed_generation: ""` — one area of a plan
+ * failing repeatedly for no visible reason.
+ *
+ * Generation is shape-following, so it is turned down; dependencies and review
+ * are the jobs where the reasoning is the point.
+ */
+const TASK_REASONING: Record<AiTask, "low" | "medium" | "high"> = {
+  subgoals: "low",
+  actions: "low",
+  refine: "low",
+  dependencies: "medium",
+  progress: "low",
+  review: "medium",
+}
+
+/**
+ * Provider-specific request options for a task.
+ *
+ * Kept here beside the provider table so that swapping providers means editing
+ * one file — call sites pass this through without naming a provider.
+ */
+export function providerOptionsFor(task: AiTask): Record<string, Record<string, string>> {
+  const provider = resolveProvider()
+  if (provider === "groq") {
+    return { groq: { reasoningEffort: TASK_REASONING[task] } }
+  }
+  return {}
+}
+
 /** Current configuration, for the health endpoint and for debugging. */
 export function describeConfig(): {
   provider: string

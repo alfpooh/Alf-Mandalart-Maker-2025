@@ -81,12 +81,16 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
    * into a stale snapshot silently drops everything saved meanwhile.
    */
   const runActionGeneration = useCallback(
-    async (started: EditorDraft, ticketId: string) => {
+    async (started: EditorDraft, ticketId: string, only?: number[]) => {
       const contents = started.subgoals.map((s) => s.content)
+      const targets =
+        only ?? started.subgoals.map((_, index) => index)
       const failed: number[] = []
 
       await Promise.all(
-        started.subgoals.map(async (subgoal, index) => {
+        targets.map(async (index) => {
+          const subgoal = started.subgoals[index]
+          if (!subgoal) return
           const siblings = contents.filter((_, i) => i !== index)
           const result = await generateActionsForSubgoal(
             subgoal.content,
@@ -98,7 +102,6 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
 
           if (!result.ok) {
             failed.push(index)
-            setFailures((current) => [...current, index])
             return
           }
           setDraft((latest) =>
@@ -107,7 +110,6 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
         }),
       )
 
-      // Areas that failed can be retried on their own; the rest are usable.
       setFailures(failed)
       setDraft((latest) => (latest ? saveDraft({ ...latest, step: "review-actions" }) : latest))
     },
@@ -123,6 +125,17 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
     setTicket(id)
     void runActionGeneration(started, id)
   }, [draft, runActionGeneration])
+
+  /** Redoes only the areas that failed, never the ones already written. */
+  const handleRetryFailed = useCallback(() => {
+    if (!draft || failures.length === 0) return
+    const retrying = [...failures]
+    const started = saveDraft({ ...draft, step: "generating-actions" })
+    setDraft(started)
+    const id = newTicket()
+    setTicket(id)
+    void runActionGeneration(started, id, retrying)
+  }, [draft, failures, runActionGeneration])
 
   /** Same shape as action generation: per area, merged as each one lands. */
   const runOrderAnalysis = useCallback(async (current: EditorDraft, ticketId: string) => {
@@ -238,7 +251,7 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
         }
         onAcceptAllActions={(id) => update((d) => confirmAllActions(d, id))}
         onComplete={handleFinishReview}
-        onRetrySubgoal={handleGenerateActions}
+        onRetrySubgoal={handleRetryFailed}
       />
     )
   }
