@@ -13,10 +13,12 @@
 import {
   ACTIONS_PER_SUBGOAL,
   SUBGOAL_COUNT,
+  type ActionDependency,
   type EditorCell,
   type EditorDraft,
   type Language,
 } from "../types"
+import { breakCycles } from "../graph"
 
 const INDEX_KEY = "mandalart.drafts"
 const TOKEN_KEY = "mandalart.draftToken"
@@ -77,7 +79,8 @@ export function loadDraft(id: string): EditorDraft | null {
     if (!draft || typeof draft.mainGoal !== "string" || !Array.isArray(draft.subgoals)) {
       return null
     }
-    return draft
+    // Drafts written before dependencies existed have no such field.
+    return { ...draft, dependencies: draft.dependencies ?? [] }
   } catch {
     return null
   }
@@ -155,6 +158,7 @@ export function createDraft(
     step: "review-subgoals",
     subgoals: subgoals.slice(0, SUBGOAL_COUNT).map((content) => cell(content)),
     actions: {},
+    dependencies: [],
     createdAt: now,
     updatedAt: now,
   }
@@ -282,4 +286,36 @@ export function createDraftWithId(
   subgoals: string[],
 ): EditorDraft {
   return { ...createDraft(mainGoal, language, subgoals), id }
+}
+
+// ---------------------------------------------------------------------------
+// Dependencies
+// ---------------------------------------------------------------------------
+
+/**
+ * Replaces the dependency set, guaranteeing it stays acyclic.
+ *
+ * Every write goes through `breakCycles` rather than trusting the caller — a
+ * cycle reaching storage would make the ordering view unable to name anything
+ * as startable, which is the one thing it exists to do.
+ */
+export function withDependencies(
+  draft: EditorDraft,
+  dependencies: ActionDependency[],
+): EditorDraft {
+  return { ...draft, dependencies: breakCycles(dependencies).edges }
+}
+
+/** Drops one prerequisite, when a person judges the ordering wrong. */
+export function removeDependency(
+  draft: EditorDraft,
+  actionId: string,
+  dependsOnId: string,
+): EditorDraft {
+  return {
+    ...draft,
+    dependencies: draft.dependencies.filter(
+      (edge) => !(edge.actionId === actionId && edge.dependsOnId === dependsOnId),
+    ),
+  }
 }

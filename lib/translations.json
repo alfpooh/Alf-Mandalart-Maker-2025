@@ -132,6 +132,16 @@
     "quota": {
       "anonExhausted": "오늘 만들 수 있는 만다라트를 모두 사용했습니다. 계정을 만들면 이어서 만들 수 있고, 지금까지 만든 것도 저장됩니다.",
       "userExhausted": "오늘의 생성 한도에 도달했습니다. 내일 다시 시도해 주세요."
+    },
+    "order": {
+      "analyzing": "실행 순서를 분석하고 있습니다",
+      "readyTitle": "지금 바로 시작할 수 있는 {n}가지",
+      "readyHint": "선행 조건이 없어 오늘 착수할 수 있는 항목입니다.",
+      "showAllReady": "{n}개 전부 보기",
+      "showFewer": "접기",
+      "blockedTitle": "다른 항목을 기다리는 {n}가지",
+      "waitsFor": "대기:",
+      "unlink": "이 선후관계 해제"
     }
   },
   "en": {
@@ -267,6 +277,16 @@
     "quota": {
       "anonExhausted": "That's today's Mandalart. Create an account to keep going — and to keep the one you just made.",
       "userExhausted": "You've hit today's limit. Try again tomorrow."
+    },
+    "order": {
+      "analyzing": "Working out what comes first",
+      "readyTitle": "{n} you can start right now",
+      "readyHint": "Nothing stands in front of these — they can begin today.",
+      "showAllReady": "Show all {n}",
+      "showFewer": "Show fewer",
+      "blockedTitle": "{n} waiting on something else",
+      "waitsFor": "Waits for:",
+      "unlink": "Remove this prerequisite"
     }
   },
   "fi": {
@@ -402,6 +422,16 @@
     "quota": {
       "anonExhausted": "Tämän päivän Mandalart on käytetty. Luo tili jatkaaksesi — ja säilyttääksesi juuri tekemäsi.",
       "userExhausted": "Päivän raja on täynnä. Yritä huomenna uudelleen."
+    },
+    "order": {
+      "analyzing": "Selvitetään mikä tulee ensin",
+      "readyTitle": "{n} voit aloittaa heti",
+      "readyHint": "Näiden edessä ei ole mitään — ne voi aloittaa tänään.",
+      "showAllReady": "Näytä kaikki {n}",
+      "showFewer": "Näytä vähemmän",
+      "blockedTitle": "{n} odottaa jotain muuta",
+      "waitsFor": "Odottaa:",
+      "unlink": "Poista tämä edellytys"
     }
   }
 }

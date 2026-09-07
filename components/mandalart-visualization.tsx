@@ -4,6 +4,7 @@ import type React from "react"
 import type { EditorDraft } from "@/lib/types"
 import { useLanguage } from "@/lib/language-context"
 import { MandalartGrid } from "@/components/mandalart-grid"
+import { ExecutionOrder } from "@/components/execution-order"
 import type { GridCell } from "@/lib/grid-layout"
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
@@ -21,6 +22,7 @@ interface MandalartVisualizationProps {
   onUpdateMainGoal?: (content: string) => void
   onUpdateSubgoal?: (index: number, content: string) => void
   onUpdateAction?: (subgoalId: string, actionIndex: number, content: string) => void
+  onRemoveDependency?: (actionId: string, dependsOnId: string) => void
 }
 
 interface CellData {
@@ -40,6 +42,7 @@ export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({
   onUpdateMainGoal,
   onUpdateSubgoal,
   onUpdateAction,
+  onRemoveDependency,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCell, setEditingCell] = useState<CellData | null>(null)
@@ -442,6 +445,11 @@ END OF DOCUMENT
             {/* Mandalart Chart */}
             <div className="mb-8 print-chart">
               <MandalartGrid draft={draft} onCellClick={handleCellClick} />
+            </div>
+
+            {/* What can be started now */}
+            <div className="mb-8">
+              <ExecutionOrder draft={draft} onRemoveDependency={onRemoveDependency} />
             </div>
 
             {/* Detailed Content */}

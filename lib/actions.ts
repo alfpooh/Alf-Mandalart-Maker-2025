@@ -200,6 +200,47 @@ export async function analyzeDependencies(
   return { ok: true, data: acyclic }
 }
 
+export interface SubgoalDependencies {
+  subgoalIndex: number
+  dependencies: ActionDependency[] | null
+  error: string | null
+}
+
+/**
+ * Prerequisites for every area at once.
+ *
+ * Eight scoped calls rather than one over all 64: a model asked to order 64
+ * items produces both weaker relationships and far more cycles, and most real
+ * prerequisites sit inside a single area anyway. An area that fails simply
+ * contributes no edges — the other seven are still useful.
+ */
+export async function analyzeAllDependencies(
+  subgoals: { id: string; content: string }[],
+  actionsBySubgoal: Record<string, { id: string; content: string }[]>,
+  mainGoal: string,
+  planId: string,
+  language: Language,
+): Promise<SubgoalDependencies[]> {
+  return Promise.all(
+    subgoals.map(async (subgoal, index) => {
+      const actions = actionsBySubgoal[subgoal.id] ?? []
+      if (actions.length === 0) {
+        return { subgoalIndex: index, dependencies: [], error: null }
+      }
+      const result = await analyzeDependencies(
+        actions,
+        subgoal.content,
+        mainGoal,
+        planId,
+        language,
+      )
+      return result.ok
+        ? { subgoalIndex: index, dependencies: result.data, error: null }
+        : { subgoalIndex: index, dependencies: null, error: result.error }
+    }),
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Progress
 // ---------------------------------------------------------------------------

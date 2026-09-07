@@ -197,6 +197,7 @@ export type AppStep =
   | "review-subgoals"
   | "generating-actions"
   | "review-actions"
+  | "analyzing-order"
   | "visualization"
 
 /**
@@ -213,8 +214,45 @@ export interface EditorDraft {
   step: AppStep
   subgoals: EditorCell[]
   actions: Record<string, EditorCell[]>
+  /**
+   * Prerequisites between actions, keyed by EditorCell id. Always acyclic —
+   * `breakCycles` runs before anything is stored here.
+   */
+  dependencies: ActionDependency[]
   createdAt: string
   updatedAt: string
+}
+
+/**
+ * A draft's action cells as `Action` rows, for the graph functions.
+ *
+ * Progress is 0 throughout while a plan is still being written — nothing has
+ * been done yet, so "ready" means "has no unmet prerequisite", which is exactly
+ * the question the ordering view answers at this stage.
+ */
+export function draftToActions(draft: EditorDraft): Action[] {
+  return draft.subgoals.flatMap((subgoal) =>
+    (draft.actions[subgoal.id] ?? []).map((cell, index) => ({
+      id: cell.id,
+      planId: draft.id,
+      subgoalId: subgoal.id,
+      position: index as Position,
+      content: cell.content,
+      metric: cell.metric,
+      cadence: "once" as const,
+      dueDate: null,
+      progress: 0 as ProgressValue,
+      updatedAt: draft.updatedAt,
+    })),
+  )
+}
+
+/** Which area (1–8) an action belongs to, for colouring the ordering view. */
+export function areaOfAction(draft: EditorDraft, actionId: string): number | null {
+  const index = draft.subgoals.findIndex((subgoal) =>
+    (draft.actions[subgoal.id] ?? []).some((cell) => cell.id === actionId),
+  )
+  return index === -1 ? null : index + 1
 }
 
 /** Every action across every subgoal, in subgoal order. */

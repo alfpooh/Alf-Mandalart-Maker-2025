@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 
+import { AnalyzingOrder } from "@/components/analyzing-order"
 import { DetailedActionsReview } from "@/components/detailed-actions-review"
 import { GeneratingActions } from "@/components/generating-actions"
 import { MandalartVisualization } from "@/components/mandalart-visualization"
 import { SubgoalReview } from "@/components/subgoal-review"
-import { generateAllActions } from "@/lib/actions"
+import { analyzeAllDependencies, generateAllActions } from "@/lib/actions"
 import { useLanguage } from "@/lib/language-context"
 import {
   confirmAllActions,
@@ -16,8 +17,10 @@ import {
   loadDraft,
   patchAction,
   patchSubgoal,
+  removeDependency,
   saveDraft,
   withActions,
+  withDependencies,
 } from "@/lib/store/local-drafts"
 import type { EditorDraft } from "@/lib/types"
 
@@ -36,6 +39,7 @@ export default function PlanPage() {
   const [draft, setDraft] = useState<EditorDraft | null>(null)
   const [status, setStatus] = useState<"loading" | "ready" | "missing">("loading")
   const [failures, setFailures] = useState<number[]>([])
+  const [analyzed, setAnalyzed] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const found = loadDraft(params.id)
@@ -78,6 +82,37 @@ export default function PlanPage() {
     })
   }, [runActionGeneration])
 
+  const runOrderAnalysis = useCallback(async (current: EditorDraft) => {
+    const subgoals = current.subgoals.map((s) => ({ id: s.id, content: s.content }))
+    const actions = Object.fromEntries(
+      current.subgoals.map((s) => [
+        s.id,
+        (current.actions[s.id] ?? []).map((a) => ({ id: a.id, content: a.content })),
+      ]),
+    )
+
+    const results = await analyzeAllDependencies(
+      subgoals,
+      actions,
+      current.mainGoal,
+      current.id,
+      current.language,
+    )
+
+    const edges = results.flatMap((r) => r.dependencies ?? [])
+    setAnalyzed(new Set(current.subgoals.map((s) => s.id)))
+    setDraft(saveDraft({ ...withDependencies(current, edges), step: "visualization" }))
+  }, [])
+
+  const handleFinishReview = useCallback(() => {
+    setDraft((current) => {
+      if (!current) return current
+      const analyzing = saveDraft({ ...current, step: "analyzing-order" })
+      void runOrderAnalysis(analyzing)
+      return analyzing
+    })
+  }, [runOrderAnalysis])
+
   if (status === "loading") {
     return <div className="min-h-screen" aria-busy="true" />
   }
@@ -116,6 +151,10 @@ export default function PlanPage() {
     )
   }
 
+  if (draft.step === "analyzing-order") {
+    return <AnalyzingOrder subgoals={draft.subgoals} done={analyzed} />
+  }
+
   if (draft.step === "generating-actions") {
     return <GeneratingActions subgoals={draft.subgoals} actions={draft.actions} />
   }
@@ -136,7 +175,7 @@ export default function PlanPage() {
           update((d) => patchAction(d, id, i, { isEditing: false, isConfirmed: true }))
         }
         onAcceptAllActions={(id) => update((d) => confirmAllActions(d, id))}
-        onComplete={() => update((d) => ({ ...d, step: "visualization" }))}
+        onComplete={handleFinishReview}
         onRetrySubgoal={handleGenerateActions}
       />
     )
@@ -153,6 +192,9 @@ export default function PlanPage() {
       onUpdateMainGoal={(content) => update((d) => ({ ...d, mainGoal: content }))}
       onUpdateSubgoal={(i, content) => update((d) => patchSubgoal(d, i, { content }))}
       onUpdateAction={(id, i, content) => update((d) => patchAction(d, id, i, { content }))}
+      onRemoveDependency={(actionId, dependsOnId) =>
+        update((d) => removeDependency(d, actionId, dependsOnId))
+      }
     />
   )
 }
