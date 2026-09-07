@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
-import { AccountMenu } from "@/components/account-menu"
 import { GoalInput } from "@/components/goal-input"
 import { RecentDrafts } from "@/components/recent-drafts"
 import { generateSubgoals } from "@/lib/actions"
@@ -19,7 +18,8 @@ import {
 } from "@/lib/store/local-drafts"
 import type { EditorDraft } from "@/lib/types"
 
-export function HomeScreen({ session }: { session: SessionInfo }) {
+/** `session` is still accepted so the page can pass it; the header renders it. */
+export function HomeScreen({ session: _session }: { session: SessionInfo }) {
   const router = useRouter()
   const { language, t } = useLanguage()
 
@@ -73,14 +73,6 @@ export function HomeScreen({ session }: { session: SessionInfo }) {
 
   return (
     <>
-      {session.configured && (
-        <div className="border-b border-border bg-background">
-          <div className="mx-auto flex max-w-7xl justify-end px-4 py-2">
-            <AccountMenu session={session} />
-          </div>
-        </div>
-      )}
-
       <GoalInput
         onGoalSubmit={handleGoalSubmit}
         isLoading={isLoading}

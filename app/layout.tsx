@@ -3,22 +3,25 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { CopyrightFooter } from "@/components/copyright-footer"
 import { LanguageProvider } from "@/lib/language-context"
-import { LanguageSelector } from "@/components/language-selector"
+import { AppHeader } from "@/components/app-header"
+import { getSession } from "@/lib/plans"
 
 export const metadata: Metadata = {
-  title: "v0 App",
-  description: "Created with v0",
-  generator: "v0.dev",
+  title: "Alf's Mandalart Goal Planner",
+  description:
+    "Turn one goal into eight areas and sixty-four concrete actions, then work out what to start today.",
   verification: {
     google: "Xr81ThN5gwQvu4CGQ4f_nOahjxcv5_RUyFM1a2iqOVE",
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const session = await getSession()
+
   return (
     <html lang="en">
       <head>
@@ -36,7 +39,7 @@ export default function RootLayout({
       </head>
       <body>
         <LanguageProvider>
-          <LanguageSelector />
+          <AppHeader session={session} />
           {children}
           <CopyrightFooter />
         </LanguageProvider>

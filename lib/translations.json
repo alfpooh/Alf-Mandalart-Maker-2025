@@ -56,7 +56,7 @@
       "topSections": "상단 섹션",
       "middleSections": "중간 섹션",
       "bottomSections": "하단 섹션",
-      "restart": "다시 시작",
+      "restart": "새 만다라트 만들기",
       "editContent": "내용 편집",
       "currentContent": "현재 내용:",
       "enterMainGoal": "메인 목표를 입력하세요...",
@@ -189,6 +189,11 @@
       "turns": "순서대로 처리 중 · {n}개 남음",
       "why": "AI 사용량 한도를 넘지 않도록 순서대로 처리합니다.",
       "shared": "다른 사용자와 순서를 나눠 쓰는 중입니다. 곧 이어집니다."
+    },
+    "header": {
+      "title": "만다라트 목표 플래너",
+      "newPlan": "새 만다라트",
+      "confirmLeave": "생성이 진행 중입니다. 지금 나가면 이번 생성은 취소되고 오늘 사용량은 되돌아오지 않습니다. 나가시겠습니까?"
     }
   },
   "en": {
@@ -248,7 +253,7 @@
       "topSections": "Top Sections",
       "middleSections": "Middle Sections",
       "bottomSections": "Bottom Sections",
-      "restart": "Restart",
+      "restart": "Make another Mandalart",
       "editContent": "Edit Content",
       "currentContent": "Current Content:",
       "enterMainGoal": "Enter your main goal...",
@@ -381,6 +386,11 @@
       "turns": "Taking turns · {n} left",
       "why": "Requests run in turn so nobody exceeds the AI usage limit.",
       "shared": "Sharing the queue with someone else right now. Yours continues shortly."
+    },
+    "header": {
+      "title": "Mandalart Goal Planner",
+      "newPlan": "New Mandalart",
+      "confirmLeave": "A run is in progress. Leaving now cancels it, and today's usage is not refunded. Leave anyway?"
     }
   },
   "fi": {
@@ -440,7 +450,7 @@
       "topSections": "Yläosat",
       "middleSections": "Keskiosat",
       "bottomSections": "Alaosat",
-      "restart": "Aloita alusta",
+      "restart": "Tee toinen Mandalart",
       "editContent": "Muokkaa sisältöä",
       "currentContent": "Nykyinen sisältö:",
       "enterMainGoal": "Syötä päätavoitteesi...",
@@ -573,6 +583,11 @@
       "turns": "Vuorotellen · {n} jäljellä",
       "why": "Pyynnöt ajetaan vuorotellen, jottei käyttöraja ylity.",
       "shared": "Jono on juuri nyt jaettu toisen kanssa. Omasi jatkuu pian."
+    },
+    "header": {
+      "title": "Mandalart-tavoitesuunnittelija",
+      "newPlan": "Uusi Mandalart",
+      "confirmLeave": "Luonti on kesken. Poistuminen peruu sen, eikä päivän käyttöä palauteta. Poistutaanko silti?"
     }
   }
 }

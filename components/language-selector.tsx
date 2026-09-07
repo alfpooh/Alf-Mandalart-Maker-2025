@@ -10,25 +10,22 @@ const NAMES: Record<Language, { native: string; short: string }> = {
 }
 
 /**
- * Language switch.
+ * Language switch, rendered inside the shared header.
  *
- * Was three 28px circles holding 24px flag emoji, fixed to the top-right corner
+ * Was three 28px circles holding 24px flag emoji fixed to the top-right corner
  * — the glyphs overflowed their buttons, the targets were below the 44px
- * minimum, and being fixed meant they sat on top of whatever the page put in
- * that corner. Now a sticky bar in normal flow, so nothing is covered, with
- * language names rather than flags: a flag names a country, not a language.
+ * minimum, and being fixed meant they sat on top of whatever the page put
+ * there. Language names rather than flags: a flag names a country.
  */
 export function LanguageSelector() {
   const { language, setLanguage } = useLanguage()
 
   return (
-    <div className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl justify-end px-4 py-2">
-        <div
-          role="radiogroup"
-          aria-label="Language"
-          className="inline-flex overflow-hidden rounded-md border border-border"
-        >
+    <div
+      role="radiogroup"
+      aria-label="Language"
+      className="inline-flex overflow-hidden rounded-md border border-border"
+    >
           {LANGUAGES.map((code) => {
             const active = language === code
             return (
@@ -48,10 +45,8 @@ export function LanguageSelector() {
                 <span aria-hidden="true">{NAMES[code].short}</span>
                 <span className="sr-only">{NAMES[code].native}</span>
               </button>
-            )
-          })}
-        </div>
-      </div>
+        )
+      })}
     </div>
   )
 }

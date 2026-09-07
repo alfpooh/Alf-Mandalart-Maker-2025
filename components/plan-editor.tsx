@@ -13,7 +13,6 @@ import { useLanguage } from "@/lib/language-context"
 import {
   confirmAllActions,
   confirmAllSubgoals,
-  deleteDraft,
   loadDraft,
   patchAction,
   patchSubgoal,
@@ -25,6 +24,7 @@ import {
 import type { EditorDraft } from "@/lib/types"
 import type { SessionInfo } from "@/lib/plans"
 import { newTicket } from "@/lib/ticket"
+import { setBusy } from "@/lib/busy"
 import { TeaserSession } from "@/components/teaser-session"
 import { markTeaserSeen, wasTeaserSeen } from "@/lib/store/local-drafts"
 
@@ -64,6 +64,10 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
     setStatus(found ? "ready" : "missing")
   }, [params.id])
 
+  // A run that is still in flight when this unmounts is abandoned either way;
+  // what must not survive is the header believing one is active.
+  useEffect(() => () => setBusy(false), [])
+
   /** Applies a change and persists it in one step, so the two cannot drift. */
   const update = useCallback((change: (current: EditorDraft) => EditorDraft) => {
     setDraft((current) => (current ? saveDraft(change(current)) : current))
@@ -82,6 +86,7 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
    */
   const runActionGeneration = useCallback(
     async (started: EditorDraft, ticketId: string, only?: number[]) => {
+      setBusy(true)
       const contents = started.subgoals.map((s) => s.content)
       const targets =
         only ?? started.subgoals.map((_, index) => index)
@@ -112,6 +117,7 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
 
       setFailures(failed)
       setDraft((latest) => (latest ? saveDraft({ ...latest, step: "review-actions" }) : latest))
+      setBusy(false)
     },
     [],
   )
@@ -139,6 +145,7 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
 
   /** Same shape as action generation: per area, merged as each one lands. */
   const runOrderAnalysis = useCallback(async (current: EditorDraft, ticketId: string) => {
+    setBusy(true)
     await Promise.all(
       current.subgoals.map(async (subgoal) => {
         const actions = (current.actions[subgoal.id] ?? []).map((a) => ({
@@ -170,6 +177,7 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
     )
 
     setDraft((latest) => (latest ? saveDraft({ ...latest, step: "visualization" }) : latest))
+    setBusy(false)
   }, [])
 
   const handleFinishReview = useCallback(() => {
@@ -265,10 +273,7 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
         draft={draft}
         locked={session.configured && !session.signedIn}
         onBack={() => update((d) => ({ ...d, step: "review-actions" }))}
-        onRestart={() => {
-          deleteDraft(draft.id)
-          router.push("/")
-        }}
+        onRestart={() => router.push("/")}
         onUpdateMainGoal={(content) => update((d) => ({ ...d, mainGoal: content }))}
         onUpdateSubgoal={(i, content) => update((d) => patchSubgoal(d, i, { content }))}
         onUpdateAction={(id, i, content) => update((d) => patchAction(d, id, i, { content }))}
