@@ -11,11 +11,20 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Download, Printer, FileText, Lock, Presentation } from "lucide-react"
+import {
+  Download,
+  Printer,
+  FileText,
+  Lock,
+  Presentation,
+  Image as ImageIcon,
+  Table,
+} from "lucide-react"
 import { track } from "@/lib/analytics"
 import html2canvas from "html2canvas"
 import { exportPlanPdf } from "@/lib/pdf"
 import { exportPlanPptx } from "@/lib/pptx"
+import { exportCsv, exportGridPng, exportMarkdown } from "@/lib/export-data"
 
 interface MandalartVisualizationProps {
   draft: EditorDraft
@@ -57,6 +66,8 @@ export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
   const [isGeneratingPPTX, setIsGeneratingPPTX] = useState(false)
   const [pdfError, setPdfError] = useState<string | null>(null)
+  const [busyExport, setBusyExport] = useState<"png" | "md" | "csv" | null>(null)
+  const [exportError, setExportError] = useState<string | null>(null)
   const printContentRef = useRef<HTMLDivElement>(null)
   // Only the grid goes into the PDF as an image; the rest is written as text.
   const gridRef = useRef<HTMLDivElement>(null)
@@ -118,132 +129,43 @@ export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({
     window.print()
   }
 
-  const generateTextContent = (): string => {
-    const currentDate = new Date().toLocaleDateString("ko-KR")
-    let textContent = `===============================================
-MANDALART GOAL PLANNER
-===============================================
-
-생성일: ${currentDate}
-
-===============================================
-🎯 메인 목표
-===============================================
-${data.mainGoal.content}
-
-===============================================
-📋 서브목표 및 액션 아이템
-===============================================
-
-`
-
-    data.subgoals.forEach((subgoal, index) => {
-      textContent += `${index + 1}. ${subgoal.content}\n`
-      textContent += `${"=".repeat(50)}\n`
-
-      const actions = data.detailedActions[subgoal.id] || []
-      if (actions.length > 0) {
-        textContent += `액션 아이템:\n`
-        actions.forEach((action, actionIndex) => {
-          textContent += `   ${actionIndex + 1}. ${action.content}\n`
-        })
-      } else {
-        textContent += `액션 아이템: 없음\n`
-      }
-      textContent += `\n`
-    })
-
-    textContent += `===============================================
-📊 MANDALART 구조 (9x9 그리드)
-===============================================
-
-중앙: ${data.mainGoal.content}
-
-서브목표 위치:
-1. 좌상단: ${data.subgoals[0]?.content || "없음"}
-2. 상단중앙: ${data.subgoals[1]?.content || "없음"}
-3. 우상단: ${data.subgoals[2]?.content || "없음"}
-4. 좌측중앙: ${data.subgoals[3]?.content || "없음"}
-5. 우측중앙: ${data.subgoals[4]?.content || "없음"}
-6. 좌하단: ${data.subgoals[5]?.content || "없음"}
-7. 하단중앙: ${data.subgoals[6]?.content || "없음"}
-8. 우하단: ${data.subgoals[7]?.content || "없음"}
-
-===============================================
-📝 개발 요약
-===============================================
-
-프로젝트명: Mandalart Goal Planner
-개발 기간: ${currentDate}
-기술 스택: Next.js, React, TypeScript, Tailwind CSS, Groq AI
-
-주요 기능:
-1. AI 기반 목표 분해 (메인 목표 → 8개 서브목표 → 각 8개 액션)
-2. 인터랙티브 목표 편집 및 확인 시스템
-3. 9x9 Mandalart 시각화 차트
-4. 클릭하여 편집 가능한 셀
-5. PDF 다운로드 및 인쇄 기능
-6. TXT 파일 다운로드 기능
-7. 한국어/영어 자동 언어 매칭
-
-개발 단계:
-1. 목표 입력 → AI 서브목표 생성
-2. 서브목표 검토 및 편집
-3. AI 액션 아이템 생성
-4. 액션 아이템 검토 및 편집
-5. 최종 Mandalart 시각화
-
-특징:
-- Groq AI 통합으로 빠른 목표 분해
-- 사용자 친화적 편집 인터페이스
-- 컬러 코딩으로 구분된 시각적 표현
-- 다양한 출력 형식 지원 (PDF, 인쇄, TXT)
-
-===============================================
-🎨 색상 구조
-===============================================
-
-메인 목표: 인디고 (중앙)
-서브목표 색상:
-1. 빨강 (좌상단)
-2. 주황 (상단중앙)
-3. 노랑 (우상단)
-4. 초록 (좌측중앙)
-5. 파랑 (우측중앙)
-6. 보라 (좌하단)
-7. 분홍 (하단중앙)
-8. 청록 (우하단)
-
-액션 아이템: 각 서브목표의 연한 색상
-
-===============================================
-📱 사용 방법
-===============================================
-
-1. 메인 목표 입력
-2. AI가 생성한 8개 서브목표 검토/편집
-3. AI가 생성한 각 서브목표별 8개 액션 아이템 검토/편집
-4. 최종 Mandalart 차트에서 셀 클릭하여 추가 편집 가능
-5. PDF, 인쇄, TXT 형식으로 결과물 다운로드
-
-===============================================
-END OF DOCUMENT
-===============================================`
-
-    return textContent
+  const docLabels = {
+    mainGoal: t("visualization.mainGoalLabel"),
+    metric: t("detailedActions.metric"),
+    readyTitle: t("order.readyTitle"),
+    waitingOn: t("order.waitsFor"),
   }
 
-  const downloadTXT = () => {
-    const textContent = generateTextContent()
-    const blob = new Blob([textContent], { type: "text/plain;charset=utf-8" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `Mandalart_${data.mainGoal.content.substring(0, 20).replace(/[^a-zA-Z0-9가-힣]/g, "_")}_${new Date().toISOString().split("T")[0]}.txt`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+  const csvHeaders = {
+    areaNo: t("csv.areaNo"),
+    area: t("csv.area"),
+    no: t("csv.no"),
+    action: t("csv.action"),
+    metric: t("detailedActions.metric"),
+    progress: t("csv.progress"),
+    ready: t("csv.ready"),
+    waitingOn: t("csv.waitingOn"),
+    yes: t("csv.yes"),
+    no_: t("csv.noValue"),
+  }
+
+  const runExport = async (kind: "png" | "md" | "csv") => {
+    setBusyExport(kind)
+    setExportError(null)
+    try {
+      if (kind === "png") {
+        await exportGridPng(gridRef.current, draft.mainGoal)
+      } else if (kind === "md") {
+        exportMarkdown(draft, docLabels)
+      } else {
+        exportCsv(draft, csvHeaders)
+      }
+    } catch (error) {
+      console.error(`[export:${kind}]`, error)
+      setExportError("visualization.exportFailed")
+    } finally {
+      setBusyExport(null)
+    }
   }
 
   const downloadPDF = async () => {
@@ -360,9 +282,31 @@ END OF DOCUMENT
                 </Button>
               ) : (
                 <>
-                  <Button onClick={downloadTXT} className="flex items-center gap-2">
+                  <Button
+                    onClick={() => runExport("png")}
+                    disabled={busyExport !== null}
+                    className="flex items-center gap-2"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                    {busyExport === "png"
+                      ? t("visualization.pngGenerating")
+                      : t("visualization.pngDownload")}
+                  </Button>
+                  <Button
+                    onClick={() => runExport("md")}
+                    disabled={busyExport !== null}
+                    className="flex items-center gap-2"
+                  >
                     <FileText className="w-4 h-4" />
-                    {t("visualization.txtDownload")}
+                    {t("visualization.mdDownload")}
+                  </Button>
+                  <Button
+                    onClick={() => runExport("csv")}
+                    disabled={busyExport !== null}
+                    className="flex items-center gap-2"
+                  >
+                    <Table className="w-4 h-4" />
+                    {t("visualization.csvDownload")}
                   </Button>
                   <Button onClick={handlePrint} className="flex items-center gap-2">
                     <Printer className="w-4 h-4" />
@@ -392,12 +336,12 @@ END OF DOCUMENT
               )}
             </div>
 
-            {pdfError && (
+            {(pdfError || exportError) && (
               <p
                 role="alert"
                 className="w-full rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-800"
               >
-                {t(pdfError)}
+                {t(pdfError ?? exportError ?? "")}
               </p>
             )}
           </div>

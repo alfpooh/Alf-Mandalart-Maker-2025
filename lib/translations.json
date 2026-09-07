@@ -40,7 +40,6 @@
     },
     "visualization": {
       "title": "만다라트 시각화",
-      "txtDownload": "TXT 다운로드",
       "print": "인쇄하기",
       "pdfDownload": "PDF 다운로드",
       "pdfGenerating": "PDF 생성 중...",
@@ -79,7 +78,12 @@
       "pptxFailed": "PPT를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.",
       "pptxNoOrder": "선후관계가 없어 모든 항목을 지금 시작할 수 있습니다.",
       "pptxDeck": "만다라트 실행 계획",
-      "pptxOverview": "전체 만다라트"
+      "pptxOverview": "전체 만다라트",
+      "pngDownload": "이미지 저장",
+      "pngGenerating": "이미지 만드는 중...",
+      "mdDownload": "Markdown",
+      "csvDownload": "CSV",
+      "exportFailed": "파일을 만들지 못했습니다. 잠시 후 다시 시도해 주세요."
     },
     "generating": {
       "title": "각 영역의 액션을 만들고 있습니다",
@@ -209,6 +213,17 @@
       "actions": "액션",
       "done": "완성",
       "backTo": "이 단계로 돌아가기"
+    },
+    "csv": {
+      "areaNo": "영역번호",
+      "area": "영역",
+      "no": "번호",
+      "action": "실행 항목",
+      "progress": "진행률",
+      "ready": "지금 가능",
+      "waitingOn": "대기 대상",
+      "yes": "예",
+      "noValue": "아니오"
     }
   },
   "en": {
@@ -252,7 +267,6 @@
     },
     "visualization": {
       "title": "Mandalart Visualization",
-      "txtDownload": "Download TXT",
       "print": "Print",
       "pdfDownload": "Download PDF",
       "pdfGenerating": "Generating PDF...",
@@ -291,7 +305,12 @@
       "pptxFailed": "Couldn't build the deck. Please try again.",
       "pptxNoOrder": "Nothing depends on anything else — all of it can start now.",
       "pptxDeck": "Mandalart action plan",
-      "pptxOverview": "The whole Mandalart"
+      "pptxOverview": "The whole Mandalart",
+      "pngDownload": "Image",
+      "pngGenerating": "Rendering...",
+      "mdDownload": "Markdown",
+      "csvDownload": "CSV",
+      "exportFailed": "Couldn't create the file. Please try again."
     },
     "generating": {
       "title": "Filling in the actions for each area",
@@ -421,6 +440,17 @@
       "actions": "Actions",
       "done": "Done",
       "backTo": "Back to this step"
+    },
+    "csv": {
+      "areaNo": "area_no",
+      "area": "area",
+      "no": "no",
+      "action": "action",
+      "progress": "progress",
+      "ready": "ready_now",
+      "waitingOn": "waiting_on",
+      "yes": "yes",
+      "noValue": "no"
     }
   },
   "fi": {
@@ -464,7 +494,6 @@
     },
     "visualization": {
       "title": "Mandalart-visualisointi",
-      "txtDownload": "Lataa TXT",
       "print": "Tulosta",
       "pdfDownload": "Lataa PDF",
       "pdfGenerating": "Luodaan PDF:ää...",
@@ -503,7 +532,12 @@
       "pptxFailed": "Esityksen luonti ei onnistunut. Yritä uudelleen.",
       "pptxNoOrder": "Mikään ei riipu muusta — kaiken voi aloittaa heti.",
       "pptxDeck": "Mandalart-toimintasuunnitelma",
-      "pptxOverview": "Koko Mandalart"
+      "pptxOverview": "Koko Mandalart",
+      "pngDownload": "Kuva",
+      "pngGenerating": "Renderöidään...",
+      "mdDownload": "Markdown",
+      "csvDownload": "CSV",
+      "exportFailed": "Tiedoston luonti ei onnistunut. Yritä uudelleen."
     },
     "generating": {
       "title": "Luodaan toimenpiteitä jokaiselle alueelle",
@@ -633,6 +667,17 @@
       "actions": "Toimenpiteet",
       "done": "Valmis",
       "backTo": "Takaisin tähän vaiheeseen"
+    },
+    "csv": {
+      "areaNo": "alue_nro",
+      "area": "alue",
+      "no": "nro",
+      "action": "toimenpide",
+      "progress": "edistyminen",
+      "ready": "valmis_nyt",
+      "waitingOn": "odottaa",
+      "yes": "kyllä",
+      "noValue": "ei"
     }
   }
 }
