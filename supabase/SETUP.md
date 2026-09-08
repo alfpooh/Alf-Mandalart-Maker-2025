@@ -9,15 +9,20 @@ real daily limit.
 Make a project at [supabase.com](https://supabase.com), then copy from
 **Project Settings → API**:
 
-| Value | Goes in |
-|---|---|
-| Project URL | `NEXT_PUBLIC_SUPABASE_URL` |
-| `anon` `public` key | `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
-| `service_role` key | `SUPABASE_SERVICE_ROLE_KEY` |
+| Dashboard | Goes in | Prefix |
+|---|---|---|
+| Project URL | `NEXT_PUBLIC_SUPABASE_URL` | — |
+| **Publishable key** | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `sb_publishable_` |
+| **Secret key** | `SUPABASE_SERVICE_ROLE_KEY` | `sb_secret_` |
 
-The service role key bypasses row level security. It belongs only in server
+Supabase renamed these: publishable replaced `anon`, secret replaced
+`service_role`. The variable names here still use the old words, but the new
+keys are what belongs in them — legacy keys also still work. Both formats are
+handled by the installed SDK.
+
+The secret key bypasses row level security. It belongs only in server
 environment variables — never in a `NEXT_PUBLIC_*` name, and never in the
-browser.
+browser. Anyone holding it can read and edit every user's plans.
 
 ## 2. Apply the schema
 
@@ -83,3 +88,20 @@ Changing the salt resets everyone's daily count.
   prompt to sign in.
 - If a step fails, the browser copy is untouched — nothing a user made is lost
   by a Supabase problem.
+
+## Verified against a live project
+
+On 2026-09-08, against a fresh project with the schema applied:
+
+- An anonymous plan is stored with `owner_id` null, `status` draft and a
+  24-hour expiry, and the browser is handed a draft token.
+- The daily limit refuses a second generation **before any model call**, so a
+  refused request costs nothing, and it still refuses after `localStorage` is
+  cleared — the private-window bypass a browser-side count would have.
+- The quota row's fingerprint contains no address, only the salted hash.
+- `claim_draft` on an unknown user is rejected by the foreign key and leaves
+  the plan intact at `owner_id` null, so a half-finished claim cannot orphan
+  someone's Mandalart. An expired draft is refused.
+
+Sign-in itself and the claim that follows it still need a Google provider,
+which was not enabled at the time of that check.
