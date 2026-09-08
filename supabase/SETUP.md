@@ -84,8 +84,8 @@ Changing the salt resets everyone's daily count.
   `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set.
 - Make a Mandalart while signed out, then sign in: it should move to your
   account and open at its own URL.
-- Make a second one while signed out from the same address: refused, with a
-  prompt to sign in.
+- Make one more than `ANON_DAILY_LIMIT` allows while signed out from the same
+  address: refused, with a prompt to sign in.
 - If a step fails, the browser copy is untouched — nothing a user made is lost
   by a Supabase problem.
 
@@ -95,9 +95,10 @@ On 2026-09-08, against a fresh project with the schema applied:
 
 - An anonymous plan is stored with `owner_id` null, `status` draft and a
   24-hour expiry, and the browser is handed a draft token.
-- The daily limit refuses a second generation **before any model call**, so a
-  refused request costs nothing, and it still refuses after `localStorage` is
-  cleared — the private-window bypass a browser-side count would have.
+- The daily limit refuses the generation past its allowance **before any model
+  call**, so a refused request costs nothing, and it still refuses after
+  `localStorage` is cleared — the private-window bypass a browser-side count
+  would have.
 - The quota row's fingerprint contains no address, only the salted hash.
 - `claim_draft` on an unknown user is rejected by the foreign key and leaves
   the plan intact at `owner_id` null, so a half-finished claim cannot orphan

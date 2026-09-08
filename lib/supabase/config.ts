@@ -26,8 +26,15 @@ export function hasServiceRole(): boolean {
   return isSupabaseConfigured() && (process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").length > 0
 }
 
-/** Anonymous visitors get this many Mandalarts per day. */
-export const ANON_DAILY_LIMIT = Number(process.env.ANON_DAILY_LIMIT ?? "1")
+/**
+ * Anonymous visitors get this many Mandalarts per day.
+ *
+ * Two rather than one: the first is often spent learning what the tool does,
+ * and someone who has to wait a day to try a real goal mostly does not come
+ * back. A plan is roughly seventeen model calls, so this is still the main
+ * thing standing between the app and an open bill.
+ */
+export const ANON_DAILY_LIMIT = Number(process.env.ANON_DAILY_LIMIT ?? "2")
 
 /** Signed-in accounts. Generous, but not unbounded — one plan is ~17 AI calls. */
 export const USER_DAILY_LIMIT = Number(process.env.USER_DAILY_LIMIT ?? "10")

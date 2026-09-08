@@ -12,6 +12,7 @@ import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 
 import { clientIp, fingerprint, today, verdict } from "./quota.ts"
+import { ANON_DAILY_LIMIT, USER_DAILY_LIMIT } from "./supabase/config.ts"
 
 describe("fingerprint", () => {
   it("is stable for the same address and salt", () => {
@@ -72,21 +73,26 @@ describe("today", () => {
 })
 
 describe("verdict", () => {
-  it("allows an anonymous visitor's first plan and refuses the second", () => {
+  // Written against the configured limit rather than a number, so changing
+  // the allowance does not silently turn these into assertions about nothing.
+  it("allows an anonymous visitor up to the limit and refuses the next", () => {
     assert.equal(verdict(0, false).allowed, true)
-    assert.equal(verdict(1, false).allowed, false)
-    assert.equal(verdict(1, false).reason, "quota.anonExhausted")
+    assert.equal(verdict(ANON_DAILY_LIMIT - 1, false).allowed, true)
+    assert.equal(verdict(ANON_DAILY_LIMIT, false).allowed, false)
+    assert.equal(verdict(ANON_DAILY_LIMIT, false).reason, "quota.anonExhausted")
   })
 
   it("gives signed-in accounts a higher ceiling", () => {
-    assert.equal(verdict(1, true).allowed, true)
+    assert.equal(verdict(ANON_DAILY_LIMIT, true).allowed, true)
+    assert.ok(USER_DAILY_LIMIT > ANON_DAILY_LIMIT)
     assert.ok(verdict(0, true).limit > verdict(0, false).limit)
   })
 
   it("refuses a count already past the limit", () => {
-    assert.equal(verdict(99, false).allowed, false)
-    assert.equal(verdict(99, true).allowed, false)
-    assert.equal(verdict(99, true).reason, "quota.userExhausted")
+    const past = Math.max(ANON_DAILY_LIMIT, USER_DAILY_LIMIT) + 1
+    assert.equal(verdict(past, false).allowed, false)
+    assert.equal(verdict(past, true).allowed, false)
+    assert.equal(verdict(past, true).reason, "quota.userExhausted")
   })
 
   it("reports the count so the UI can say how many are left", () => {
