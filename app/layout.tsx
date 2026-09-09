@@ -42,7 +42,12 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body>
+      {/* Browser extensions write their own attributes onto <body> before
+          React hydrates — a password manager, a translator, a recorder — and
+          React then reports a mismatch the app cannot fix and did not cause.
+          This suppresses the warning for this element's own attributes only;
+          a genuine mismatch anywhere inside still reports normally. */}
+      <body suppressHydrationWarning>
         <LanguageProvider>
           <AppHeader session={session} />
           {children}

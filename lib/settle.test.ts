@@ -9,6 +9,9 @@ import { describe, it } from "node:test"
 
 import { settle } from "./settle.ts"
 
+/** The shape these actions actually return. */
+type Result = { ok: true; data: string } | { ok: false; error: string }
+
 describe("settle", () => {
   it("passes a success through untouched", () => {
     const ok = { ok: true as const, data: [1, 2] }
@@ -24,13 +27,13 @@ describe("settle", () => {
   it("turns undefined into a failure instead of letting .ok throw", () => {
     // This is the whole point: before the guard, reading .ok off the missing
     // result was an unhandled TypeError that blanked the page.
-    const result = settle(undefined)
+    const result = settle<Result>(undefined)
     assert.equal(result.ok, false)
     assert.doesNotThrow(() => result.ok)
   })
 
   it("reports a translation key, so the UI can say to reload", () => {
-    const result = settle(undefined)
+    const result = settle<Result>(undefined)
     assert.equal(result.ok, false)
     if (!result.ok) assert.equal(result.error, "app.stale")
   })

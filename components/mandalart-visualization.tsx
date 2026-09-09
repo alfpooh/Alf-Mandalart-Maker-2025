@@ -6,7 +6,7 @@ import { useLanguage } from "@/lib/language-context"
 import { MandalartGrid } from "@/components/mandalart-grid"
 import { ExecutionOrder } from "@/components/execution-order"
 import type { GridCell } from "@/lib/grid-layout"
-import { useState, useRef } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
@@ -71,7 +71,14 @@ export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({
   const printContentRef = useRef<HTMLDivElement>(null)
   // Only the grid goes into the PDF as an image; the rest is written as text.
   const gridRef = useRef<HTMLDivElement>(null)
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
+  // Filled after mount rather than during render: this component is server
+  // rendered too, and the server's clock is UTC while the reader's is not, so
+  // across midnight the two produce different dates and hydration mismatches.
+  const [generatedOn, setGeneratedOn] = useState("")
+  useEffect(() => {
+    setGeneratedOn(new Date().toLocaleDateString(language))
+  }, [language])
 
   // Phase 1 rebuilds this grid; until then the draft is shaped to what the
   // existing render already expects rather than rewriting 600 lines twice.
@@ -351,7 +358,9 @@ export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({
             {/* Print Header */}
             <div className="text-center mb-6 print:mb-4">
               <h1 className="text-2xl font-bold text-gray-800 mb-2">Mandalart Goal Planner</h1>
-              <p className="text-gray-600 text-sm">생성일: {new Date().toLocaleDateString("ko-KR")}</p>
+              <p className="text-gray-600 text-sm">
+                {t("visualization.generatedDate")} {generatedOn}
+              </p>
             </div>
 
             {/* Legend */}
