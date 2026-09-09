@@ -184,9 +184,9 @@ For a deeper understanding of the Mandalart technique, read this comprehensive a
 ## 🛠️ Running it | 실행하기 | Käyttöönotto
 
 ```bash
-pnpm install
+npm install
 cp .env.example .env.local   # then fill it in — see below
-pnpm dev
+npm run dev
 ```
 
 ### What it needs
@@ -230,8 +230,8 @@ take turns instead of exceeding the provider's per-minute allowance together.
 ### Tests
 
 ```bash
-pnpm test        # dependency graph, quota, queue
-pnpm typecheck
+npm test         # dependency graph, quota, queue
+npm run typecheck
 ```
 
 ---
