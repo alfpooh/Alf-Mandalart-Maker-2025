@@ -1,5 +1,14 @@
+import { dirname } from "node:path"
+import { fileURLToPath } from "node:url"
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Next 15 infers the workspace root from the nearest lockfiles, and there is
+  // a stray package-lock.json in the home directory above this project. Left
+  // to infer, file tracing would walk from there — a slow build that can pull
+  // unrelated files into a standalone bundle. Pin it to this directory.
+  outputFileTracingRoot: dirname(fileURLToPath(import.meta.url)),
+
   typescript: {
     // Re-enabled once the tree typechecked clean. Leave it on: the old setting
     // let the removed-API breakage reach a deploy instead of the build.

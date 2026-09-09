@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/?auth=missing_code", url.origin))
   }
 
-  const supabase = getServerClient()
+  const supabase = await getServerClient()
   if (!supabase) {
     return NextResponse.redirect(new URL("/?auth=unconfigured", url.origin))
   }

@@ -16,9 +16,11 @@ import type { Database } from "./types"
  * rows — which is what we want everywhere except the two places that need the
  * service role.
  */
-export function getServerClient() {
+export async function getServerClient() {
   if (!isSupabaseConfigured()) return null
-  const store = cookies()
+  // Async since Next 15: cookies() returns a promise, which makes every
+  // caller of this factory async too.
+  const store = await cookies()
 
   return createServerClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {
@@ -58,7 +60,7 @@ export function getAdminClient() {
 
 /** The signed-in user, or null. */
 export async function getCurrentUser() {
-  const supabase = getServerClient()
+  const supabase = await getServerClient()
   if (!supabase) return null
   const { data, error } = await supabase.auth.getUser()
   if (error) return null

@@ -112,7 +112,7 @@ async function quotaKey(userId: string | null): Promise<string | null> {
     return null
   }
 
-  const ip = clientIp(headers())
+  const ip = clientIp(await headers())
   return ip ? fingerprint(ip, salt) : null
 }
 
@@ -150,7 +150,7 @@ export async function createPlan(
     return { ok: true, plan: null }
   }
 
-  const supabase = getServerClient()
+  const supabase = await getServerClient()
   if (!supabase) return { ok: true, plan: null }
 
   const user = await getCurrentUser()
@@ -203,7 +203,7 @@ export async function savePlanContent(
   draftToken: string | null,
   draft: EditorDraft,
 ): Promise<{ ok: boolean; error?: string }> {
-  const supabase = draftToken ? getAdminClient() : getServerClient()
+  const supabase = draftToken ? getAdminClient() : await getServerClient()
   if (!supabase) return { ok: true }
 
   // Ownership is proved by the token for a draft, and by RLS for an account.

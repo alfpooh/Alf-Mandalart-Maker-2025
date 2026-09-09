@@ -13,10 +13,11 @@ import { getServerClient } from "./supabase/server"
  * ends the request either way.
  */
 export async function signInWithGoogle(): Promise<void> {
-  const supabase = getServerClient()
+  const supabase = await getServerClient()
   if (!supabase) redirect("/?auth=unconfigured")
 
-  const origin = headers().get("origin") ?? headers().get("x-forwarded-host")
+  const headerList = await headers()
+  const origin = headerList.get("origin") ?? headerList.get("x-forwarded-host")
   const base = origin?.startsWith("http") ? origin : `https://${origin}`
 
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -29,7 +30,7 @@ export async function signInWithGoogle(): Promise<void> {
 }
 
 export async function signOut(): Promise<void> {
-  const supabase = getServerClient()
+  const supabase = await getServerClient()
   if (supabase) await supabase.auth.signOut()
   redirect("/")
 }
