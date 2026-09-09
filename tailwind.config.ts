@@ -12,6 +12,22 @@ const config: Config = {
   ],
   theme: {
   	extend: {
+  		// Geist has no Hangul, so Korean and Finnish text falls through to the
+  		// system stack. Named explicitly rather than left to the browser default,
+  		// which picks poorly for Korean on Windows.
+  		fontFamily: {
+  			sans: [
+  				'var(--font-sans)',
+  				'-apple-system',
+  				'BlinkMacSystemFont',
+  				'Apple SD Gothic Neo',
+  				'Pretendard',
+  				'Malgun Gothic',
+  				'Segoe UI',
+  				'sans-serif'
+  			],
+  			mono: ['var(--font-mono)', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace']
+  		},
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',

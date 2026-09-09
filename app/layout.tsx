@@ -1,5 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
+import { GeistMono } from "geist/font/mono"
+import { GeistSans } from "geist/font/sans"
 import "./globals.css"
 import { CopyrightFooter } from "@/components/copyright-footer"
 import { LanguageProvider } from "@/lib/language-context"
@@ -23,7 +25,10 @@ export default async function RootLayout({
   const session = await getSession()
 
   return (
-    <html lang="en">
+    // The two classes define --font-geist-sans and --font-geist-mono, which
+    // globals.css has always mapped to --font-sans/--font-mono. Without them
+    // that mapping pointed at nothing.
+    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <head>
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-863WB90YC8"></script>
         <script
