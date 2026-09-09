@@ -227,6 +227,27 @@ entry in the `PROVIDERS` map plus its `@ai-sdk/*` package.
 Requests share a single server-side queue, so several people generating at once
 take turns instead of exceeding the provider's per-minute allowance together.
 
+### Deploying
+
+Runs as a long-lived Node process — `npm ci && npm run build`, then
+`npm start`. The server honours `PORT` and binds every interface, so a
+platform that sets `PORT` and health-checks the port needs no extra config.
+Node is pinned in `engines` and `.node-version`.
+
+Set every variable **before the first build**, not after. `getSession()`
+reads cookies only when Supabase is configured, so a build without those
+variables prerenders `/` as static and the account button is then missing
+from cached HTML until the next build.
+
+Two external allowlists have to name the deployed URL or sign-in fails with
+`invalid_client`: the redirect URI in Google Cloud Console, and Site URL /
+Redirect URLs in Supabase.
+
+The generation queue keeps its state in the process, so it bounds
+concurrency for one instance. Run several and each gets its own allowance —
+raise `AI_CONCURRENCY` for a paid tier rather than relying on replicas
+staying in step.
+
 ### Tests
 
 ```bash
