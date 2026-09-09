@@ -1,13 +1,13 @@
 "use client"
 
-import { AlertTriangle, Check, Edit2, RotateCw, Save } from "lucide-react"
+import { AlertTriangle, Check, Edit2, Plus, RotateCw, Save, Trash2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useLanguage } from "@/lib/language-context"
-import { type EditorCell } from "@/lib/types"
+import { ACTIONS_PER_SUBGOAL, type EditorCell } from "@/lib/types"
 
 interface DetailedActionsReviewProps {
   mainGoal: string
@@ -22,6 +22,13 @@ interface DetailedActionsReviewProps {
   onAcceptAllActions: (subgoalId: string) => void
   onComplete: () => void
   onRetrySubgoal: () => void
+  /** Adds one empty action to an area, for filling a gap by hand. */
+  onAddAction: (subgoalId: string) => void
+  onRemoveAction: (subgoalId: string, actionIndex: number) => void
+  /** Regenerates one area. Works from the area itself, so it survives a reload
+   *  — the failure banner does not, being component state. */
+  onRegenerateArea: (subgoalIndex: number) => void
+  regeneratingArea: number | null
 }
 
 export function DetailedActionsReview({
@@ -36,12 +43,19 @@ export function DetailedActionsReview({
   onAcceptAllActions,
   onComplete,
   onRetrySubgoal,
+  onAddAction,
+  onRemoveAction,
+  onRegenerateArea,
+  regeneratingArea,
 }: DetailedActionsReviewProps) {
   const { t } = useLanguage()
 
   const all = Object.values(detailedActions).flat()
   const confirmed = all.filter((action) => action.isConfirmed).length
-  const canComplete = all.length > 0 && confirmed === all.length && failedSubgoals.length === 0
+  const blank = all.filter((action) => action.content.trim().length === 0).length
+  // An area left empty no longer blocks finishing — it can be filled by hand,
+  // and a plan of fifty-six actions someone chose beats one they cannot leave.
+  const canComplete = all.length > 0 && confirmed === all.length && blank === 0
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -104,9 +118,36 @@ export function DetailedActionsReview({
 
                 <CardContent>
                   {actions.length === 0 ? (
-                    <p className="py-4 text-center text-sm text-gray-500">
-                      {t("detailedActions.empty")}
-                    </p>
+                    <div className="flex flex-col items-center gap-3 py-6 text-center">
+                      <p className="text-sm text-gray-500">{t("detailedActions.empty")}</p>
+                      <div className="flex flex-wrap justify-center gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => onRegenerateArea(subgoalIndex)}
+                          disabled={regeneratingArea !== null}
+                        >
+                          <RotateCw
+                            className={`mr-1 h-4 w-4 ${
+                              regeneratingArea === subgoalIndex
+                                ? "animate-spin motion-reduce:animate-none"
+                                : ""
+                            }`}
+                            aria-hidden="true"
+                          />
+                          {regeneratingArea === subgoalIndex
+                            ? t("detailedActions.regenerating")
+                            : t("detailedActions.regenerateArea")}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onAddAction(subgoal.id)}
+                        >
+                          <Plus className="mr-1 h-4 w-4" aria-hidden="true" />
+                          {t("detailedActions.addManually")}
+                        </Button>
+                      </div>
+                    </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                       {actions.map((action, actionIndex) => (
@@ -144,14 +185,26 @@ export function DetailedActionsReview({
 
                           <div className="flex gap-2">
                             {action.isEditing ? (
-                              <Button
-                                size="sm"
-                                className="flex-1"
-                                onClick={() => onSaveEdit(subgoal.id, actionIndex)}
-                              >
-                                <Save className="mr-1 h-4 w-4" aria-hidden="true" />
-                                {t("detailedActions.save")}
-                              </Button>
+                              <>
+                                <Button
+                                  size="sm"
+                                  className="flex-1"
+                                  disabled={action.content.trim().length === 0}
+                                  onClick={() => onSaveEdit(subgoal.id, actionIndex)}
+                                >
+                                  <Save className="mr-1 h-4 w-4" aria-hidden="true" />
+                                  {t("detailedActions.save")}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => onRemoveAction(subgoal.id, actionIndex)}
+                                  aria-label={t("detailedActions.remove")}
+                                  title={t("detailedActions.remove")}
+                                >
+                                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                                </Button>
+                              </>
                             ) : (
                               <>
                                 <Button
@@ -176,6 +229,18 @@ export function DetailedActionsReview({
                           </div>
                         </div>
                       ))}
+
+                      {actions.length < ACTIONS_PER_SUBGOAL && (
+                        <button
+                          type="button"
+                          onClick={() => onAddAction(subgoal.id)}
+                          className="flex min-h-[76px] items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 p-3 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700 focus-visible:outline focus-visible:outline-2"
+                        >
+                          <Plus className="h-4 w-4" aria-hidden="true" />
+                          {t("detailedActions.addAction")} ({actions.length}/
+                          {ACTIONS_PER_SUBGOAL})
+                        </button>
+                      )}
                     </div>
                   )}
                 </CardContent>

@@ -12,11 +12,13 @@ import { SubgoalReview } from "@/components/subgoal-review"
 import { analyzeDependencies, generateActionsForSubgoal } from "@/lib/actions"
 import { useLanguage } from "@/lib/language-context"
 import {
+  addAction,
   confirmAllActions,
   confirmAllSubgoals,
   loadDraft,
   patchAction,
   patchSubgoal,
+  removeAction,
   removeDependency,
   saveDraft,
   withActions,
@@ -45,6 +47,7 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
   const [status, setStatus] = useState<"loading" | "ready" | "missing">("loading")
   const [failures, setFailures] = useState<number[]>([])
   const [analyzed, setAnalyzed] = useState<Set<string>>(new Set())
+  const [regeneratingArea, setRegeneratingArea] = useState<number | null>(null)
   const [showTeaser, setShowTeaser] = useState(false)
   const [ticket, setTicket] = useState<string | null>(null)
 
@@ -147,6 +150,46 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
   }, [draft, failures, runActionGeneration])
 
   /** Same shape as action generation: per area, merged as each one lands. */
+  /**
+   * Regenerates a single area, in place.
+   *
+   * Offered from the area itself rather than from the failure banner, because
+   * the banner is component state and is gone after a reload — which used to
+   * leave an empty area with no way forward at all.
+   */
+  const handleRegenerateArea = useCallback(
+    async (subgoalIndex: number) => {
+      if (!draft) return
+      const subgoal = draft.subgoals[subgoalIndex]
+      if (!subgoal) return
+
+      setRegeneratingArea(subgoalIndex)
+      setBusy(true)
+      try {
+        const siblings = draft.subgoals
+          .filter((_, i) => i !== subgoalIndex)
+          .map((s) => s.content)
+        const result = await generateActionsForSubgoal(
+          subgoal.content,
+          draft.mainGoal,
+          siblings,
+          draft.language,
+          newTicket(),
+        )
+        if (result.ok) {
+          setDraft((latest) =>
+            latest ? saveDraft(withActions(latest, subgoal.id, result.data)) : latest,
+          )
+          setFailures((current) => current.filter((i) => i !== subgoalIndex))
+        }
+      } finally {
+        setRegeneratingArea(null)
+        setBusy(false)
+      }
+    },
+    [draft],
+  )
+
   const runOrderAnalysis = useCallback(async (current: EditorDraft, ticketId: string) => {
     setBusy(true)
     await Promise.all(
@@ -266,6 +309,10 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
           onAcceptAllActions={(id) => update((d) => confirmAllActions(d, id))}
           onComplete={handleFinishReview}
           onRetrySubgoal={handleRetryFailed}
+          onAddAction={(id) => update((d) => addAction(d, id))}
+          onRemoveAction={(id, i) => update((d) => removeAction(d, id, i))}
+          onRegenerateArea={handleRegenerateArea}
+          regeneratingArea={regeneratingArea}
         />
       )
     }

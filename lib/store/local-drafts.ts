@@ -216,6 +216,49 @@ export function patchAction(
   }
 }
 
+/**
+ * Adds one empty action to an area, opened for editing.
+ *
+ * An area whose generation failed shows nothing and, once the page is
+ * reloaded, has no retry offered either — the failure list is component state.
+ * Writing the eight by hand has to be possible, or that area is simply lost.
+ *
+ * Capped at eight: the limited number of cells is the method, not a technical
+ * constraint, and letting it grow would quietly discard that.
+ */
+export function addAction(draft: EditorDraft, subgoalId: string): EditorDraft {
+  const list = draft.actions[subgoalId] ?? []
+  if (list.length >= ACTIONS_PER_SUBGOAL) return draft
+  return {
+    ...draft,
+    actions: {
+      ...draft.actions,
+      [subgoalId]: [...list, { ...cell(""), isEditing: true }],
+    },
+  }
+}
+
+/** Removes one action, and any dependency edge that pointed at it. */
+export function removeAction(
+  draft: EditorDraft,
+  subgoalId: string,
+  index: number,
+): EditorDraft {
+  const list = draft.actions[subgoalId]
+  if (!list || !list[index]) return draft
+  const removedId = list[index].id
+
+  return {
+    ...draft,
+    actions: { ...draft.actions, [subgoalId]: list.filter((_, i) => i !== index) },
+    // A prerequisite pointing at a deleted action would block its dependents
+    // for ever, since nothing can complete it.
+    dependencies: draft.dependencies.filter(
+      (edge) => edge.actionId !== removedId && edge.dependsOnId !== removedId,
+    ),
+  }
+}
+
 export function confirmAllSubgoals(draft: EditorDraft): EditorDraft {
   return {
     ...draft,

@@ -31,12 +31,17 @@
       "generating": "각 서브목표에 대한 상세 액션 생성 중...",
       "failed": "개 영역의 생성이 실패했습니다",
       "retry": "다시 시도",
-      "empty": "아직 액션이 없습니다",
+      "empty": "이 영역의 액션이 없습니다. 다시 생성하거나 직접 8개까지 입력할 수 있습니다.",
       "action": "액션",
       "metric": "측정 기준",
       "save": "저장",
       "edit": "수정",
-      "complete": "만다라트 완성하기"
+      "complete": "만다라트 완성하기",
+      "addAction": "액션 추가",
+      "addManually": "직접 입력하기",
+      "remove": "삭제",
+      "regenerateArea": "이 영역 다시 생성",
+      "regenerating": "생성 중..."
     },
     "visualization": {
       "title": "만다라트 시각화",
@@ -258,12 +263,17 @@
       "generating": "Generating detailed actions for each subgoal...",
       "failed": "area(s) failed to generate",
       "retry": "Try again",
-      "empty": "No actions yet",
+      "empty": "No actions for this area. Regenerate it, or write up to eight yourself.",
       "action": "Action",
       "metric": "Metric",
       "save": "Save",
       "edit": "Edit",
-      "complete": "Finish Mandalart"
+      "complete": "Finish Mandalart",
+      "addAction": "Add action",
+      "addManually": "Write them myself",
+      "remove": "Delete",
+      "regenerateArea": "Regenerate this area",
+      "regenerating": "Generating..."
     },
     "visualization": {
       "title": "Mandalart Visualization",
@@ -485,12 +495,17 @@
       "generating": "Luodaan yksityiskohtaisia toimia jokaiselle alatavoitteelle...",
       "failed": "aluetta epäonnistui",
       "retry": "Yritä uudelleen",
-      "empty": "Ei vielä toimenpiteitä",
+      "empty": "Tällä alueella ei ole toimenpiteitä. Luo uudelleen tai kirjoita enintään kahdeksan itse.",
       "action": "Toimenpide",
       "metric": "Mittari",
       "save": "Tallenna",
       "edit": "Muokkaa",
-      "complete": "Viimeistele Mandalart"
+      "complete": "Viimeistele Mandalart",
+      "addAction": "Lisää toimenpide",
+      "addManually": "Kirjoita itse",
+      "remove": "Poista",
+      "regenerateArea": "Luo tämä alue uudelleen",
+      "regenerating": "Luodaan..."
     },
     "visualization": {
       "title": "Mandalart-visualisointi",
