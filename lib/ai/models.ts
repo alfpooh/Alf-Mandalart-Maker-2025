@@ -7,13 +7,14 @@
  *
  * Per-task env overrides let a single job move without disturbing the rest:
  *
- *   AI_MODEL=llama-3.3-70b-versatile             # default for every task
- *   AI_MODEL_DEPENDENCIES=llama-3.3-70b-versatile # just this one
- *   AI_PROVIDER=groq
+ *   AI_MODEL=gemini-flash-latest              # default for every task
+ *   AI_MODEL_DEPENDENCIES=gemini-pro-latest   # just this one
+ *   AI_PROVIDER=google
  */
 
+import { google } from "@ai-sdk/google"
 import { groq } from "@ai-sdk/groq"
-import type { LanguageModel } from "ai"
+import type { JSONValue, LanguageModel } from "ai"
 
 /**
  * The jobs the app asks a model to do. Split by what they demand rather than by
@@ -37,45 +38,58 @@ export const AI_TASKS: AiTask[] = [
   "review",
 ]
 
-type ProviderId = "groq"
+type ProviderId = "google" | "groq"
 
 /**
  * Adding a provider is one entry here plus its `@ai-sdk/*` package.
  * The AI SDK's `LanguageModel` is the seam that keeps call sites untouched.
  */
 const PROVIDERS: Record<ProviderId, (modelId: string) => LanguageModel> = {
+  google: (modelId) => google(modelId),
   groq: (modelId) => groq(modelId),
 }
 
-const DEFAULT_PROVIDER: ProviderId = "groq"
+const DEFAULT_PROVIDER: ProviderId = "google"
 
 /**
- * Default for the generation jobs.
+ * Default models, per provider.
  *
- * `llama-3.1-8b-instant`, which this app shipped with, was withdrawn from Groq
- * and now returns 404 `model_not_found`. Of what remains, only the gpt-oss
- * family accepts `response_format: json_schema`; qwen and the compound models
- * reject it with a 400, and structured output is what replaced the old regex
- * parsing, so they are not usable here.
+ * Keyed by provider because a model id means nothing outside the provider it
+ * belongs to: `AI_PROVIDER=groq` has to fall back to Groq's ids, not Gemini's.
+ *
+ * On Google the two `-latest` aliases are deliberate. A pinned id is the safer
+ * choice when someone is watching the app, but this one runs unattended, and
+ * the failure modes are not symmetric: an alias drifts to a newer model of the
+ * same class, while a pinned id eventually stops resolving altogether — which
+ * is exactly how `llama-3.1-8b-instant` took this app down. Pinning is one env
+ * var away when a specific version matters.
+ *
+ * `dependencies` and `review` are the two jobs per plan that carry actual
+ * judgement — working out what blocks what, and reading a whole plan for gaps —
+ * so they get the pro model. The other fifteen calls are shape-following, and
+ * flash is both faster and cheaper at it.
  */
-const DEFAULT_MODEL = "openai/gpt-oss-20b"
-
-/**
- * Working out prerequisites and reviewing a whole plan are the two jobs that
- * need actual reasoning. Measured on the same eight actions, 120b found a
- * correct prerequisite that 20b missed and gave better rationales, at roughly
- * 1.5x the output tokens — worth it on the two calls per plan that carry the
- * most judgement, not on the sixty-four that do not.
- */
-const REASONING_MODEL = "openai/gpt-oss-120b"
-
-const TASK_DEFAULTS: Record<AiTask, string> = {
-  subgoals: DEFAULT_MODEL,
-  actions: DEFAULT_MODEL,
-  refine: DEFAULT_MODEL,
-  dependencies: REASONING_MODEL,
-  progress: DEFAULT_MODEL,
-  review: REASONING_MODEL,
+const TASK_DEFAULTS: Record<ProviderId, Record<AiTask, string>> = {
+  google: {
+    subgoals: "gemini-flash-latest",
+    actions: "gemini-flash-latest",
+    refine: "gemini-flash-latest",
+    dependencies: "gemini-pro-latest",
+    progress: "gemini-flash-latest",
+    review: "gemini-pro-latest",
+  },
+  // Kept working so the provider can be switched back with one env var.
+  // Of what Groq still serves, only the gpt-oss family accepts
+  // `response_format: json_schema`; qwen and the compound models return 400,
+  // and structured output is what the app is built on.
+  groq: {
+    subgoals: "openai/gpt-oss-20b",
+    actions: "openai/gpt-oss-20b",
+    refine: "openai/gpt-oss-20b",
+    dependencies: "openai/gpt-oss-120b",
+    progress: "openai/gpt-oss-20b",
+    review: "openai/gpt-oss-120b",
+  },
 }
 
 /** Env var carrying the override for one task, e.g. `AI_MODEL_SUBGOALS`. */
@@ -94,7 +108,7 @@ export function modelIdFor(task: AiTask): string {
   return (
     process.env[envKeyFor(task)] ||
     process.env.AI_MODEL ||
-    TASK_DEFAULTS[task]
+    TASK_DEFAULTS[resolveProvider()][task]
   )
 }
 
@@ -106,9 +120,9 @@ export function modelFor(task: AiTask): LanguageModel {
 /**
  * How long a task may run before it is abandoned.
  *
- * Generous, because a rate-limited call waits out its window and retries: on
- * Groq's free tier a plan's calls exceed the per-minute token allowance
- * between them, so finishing slowly beats failing fast.
+ * Generous, because a rate-limited call waits out its window and retries: on a
+ * free tier a plan's calls exceed the per-minute allowance between them, so
+ * finishing slowly beats failing fast.
  */
 export const TASK_TIMEOUT_MS: Record<AiTask, number> = {
   subgoals: 60_000,
@@ -120,16 +134,19 @@ export const TASK_TIMEOUT_MS: Record<AiTask, number> = {
 }
 
 /**
- * How much of the token budget each task may spend on reasoning.
+ * How much of the token budget each task may spend on thinking.
  *
- * gpt-oss thinks before it answers, and the thinking is billed and capped
- * together with the answer. Left at its default, a generation call sometimes
- * spends the lot on reasoning and returns an empty body, which the API rejects
- * as `json_validate_failed` with `failed_generation: ""` — one area of a plan
- * failing repeatedly for no visible reason.
+ * Both providers charge for reasoning tokens and both let it be turned down,
+ * under different names — Groq calls it `reasoningEffort`, Gemini
+ * `thinkingConfig.thinkingLevel` — over the same low/medium/high scale, so one
+ * table drives both.
  *
- * Generation is shape-following, so it is turned down; dependencies and review
- * are the jobs where the reasoning is the point.
+ * The setting is not cosmetic. Left at its default on gpt-oss, a generation
+ * call sometimes spent the whole budget on reasoning and returned an empty
+ * body, which the API rejected as `json_validate_failed` with
+ * `failed_generation: ""` — one area of a plan failing repeatedly for no
+ * visible reason. Generation is shape-following, so it is turned down;
+ * dependencies and review are the jobs where the reasoning is the point.
  */
 const TASK_REASONING: Record<AiTask, "low" | "medium" | "high"> = {
   subgoals: "low",
@@ -146,12 +163,15 @@ const TASK_REASONING: Record<AiTask, "low" | "medium" | "high"> = {
  * Kept here beside the provider table so that swapping providers means editing
  * one file — call sites pass this through without naming a provider.
  */
-export function providerOptionsFor(task: AiTask): Record<string, Record<string, string>> {
-  const provider = resolveProvider()
-  if (provider === "groq") {
-    return { groq: { reasoningEffort: TASK_REASONING[task] } }
+export function providerOptionsFor(
+  task: AiTask,
+): Record<string, Record<string, JSONValue>> {
+  switch (resolveProvider()) {
+    case "google":
+      return { google: { thinkingConfig: { thinkingLevel: TASK_REASONING[task] } } }
+    case "groq":
+      return { groq: { reasoningEffort: TASK_REASONING[task] } }
   }
-  return {}
 }
 
 /** Current configuration, for the health endpoint and for debugging. */

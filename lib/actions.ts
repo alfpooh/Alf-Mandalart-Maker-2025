@@ -41,10 +41,12 @@ export type AiResult<T> = { ok: true; data: T } | { ok: false; error: string }
 /**
  * True when a failure is worth another attempt with the same input.
  *
- * gpt-oss intermittently returns the JSON Schema it was given instead of data
- * matching it. Groq rejects that as `json_validate_failed` and marks it
- * non-retryable, so the SDK gives up — but the very same request usually
- * succeeds on the next try, so it is retryable in practice.
+ * Every model tried here occasionally returns something that does not match
+ * the schema — gpt-oss used to hand back the JSON Schema itself instead of
+ * data matching it, and the provider marked that non-retryable, so the SDK
+ * gave up. The very same request usually succeeds on the next try, so it is
+ * retryable in practice. Rate limits land here too: on a free tier a plan's
+ * calls outrun the per-minute allowance, and waiting is the fix, not failing.
  */
 function isTransient(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error)

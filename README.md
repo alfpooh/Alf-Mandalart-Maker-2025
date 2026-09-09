@@ -195,7 +195,7 @@ Only one variable is required. Everything else adds capability.
 
 | Variable | Required | What it does |
 |---|---|---|
-| `GROQ_API_KEY` | **yes** | Generation. Without it nothing can be created. |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | **yes** | Generation, via Gemini. Without it nothing can be created. [Get one here.](https://aistudio.google.com/apikey) |
 | `NEXT_PUBLIC_SUPABASE_URL` | no | Accounts and saving |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | no | Supabase's *publishable* key (`sb_publishable_…`) |
 | `SUPABASE_SERVICE_ROLE_KEY` | no | Supabase's *secret* key (`sb_secret_…`) — **server only** |
@@ -211,15 +211,18 @@ wiring Google sign-in.
 ### Choosing a model
 
 Every model call resolves through `lib/ai/models.ts`, so no other file names a
-model. Six jobs are configured separately — generation runs on a fast model,
-dependency analysis and whole-plan review on a stronger one — and each can be
-overridden:
+model. Six jobs are configured separately — generation runs on Gemini Flash,
+dependency analysis and whole-plan review on Pro — and each can be overridden:
 
 ```
-AI_MODEL=openai/gpt-oss-20b               # default for every job
-AI_MODEL_DEPENDENCIES=openai/gpt-oss-120b # just this one
+AI_MODEL=gemini-flash-latest              # default for every job
+AI_MODEL_DEPENDENCIES=gemini-pro-latest   # just this one
 AI_CONCURRENCY=2                          # calls in flight at once
 ```
+
+Providers sit behind the same seam. Groq is still wired up — `AI_PROVIDER=groq`
+with a `GROQ_API_KEY` switches back to gpt-oss — and adding a third is one
+entry in the `PROVIDERS` map plus its `@ai-sdk/*` package.
 
 Requests share a single server-side queue, so several people generating at once
 take turns instead of exceeding the provider's per-minute allowance together.
@@ -239,4 +242,4 @@ All rights reserved © D.H. Alf Bae, 2025
 
 ---
 
-*Next.js · TypeScript · Tailwind · Groq · Supabase*
+*Next.js · TypeScript · Tailwind · Gemini · Supabase*
