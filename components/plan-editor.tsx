@@ -30,6 +30,7 @@ import { newTicket } from "@/lib/ticket"
 import { isBusy, setBusy, subscribeBusy } from "@/lib/busy"
 import { TeaserSession } from "@/components/teaser-session"
 import { markTeaserSeen, wasTeaserSeen } from "@/lib/store/local-drafts"
+import { settle } from "@/lib/settle"
 
 /**
  * One Mandalart, at whichever step it is on.
@@ -104,12 +105,14 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
           const subgoal = started.subgoals[index]
           if (!subgoal) return
           const siblings = contents.filter((_, i) => i !== index)
-          const result = await generateActionsForSubgoal(
-            subgoal.content,
-            started.mainGoal,
-            siblings,
-            started.language,
-            ticketId,
+          const result = settle(
+            await generateActionsForSubgoal(
+              subgoal.content,
+              started.mainGoal,
+              siblings,
+              started.language,
+              ticketId,
+            ),
           )
 
           if (!result.ok) {
@@ -171,12 +174,14 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
         const siblings = draft.subgoals
           .filter((_, i) => i !== subgoalIndex)
           .map((s) => s.content)
-        const result = await generateActionsForSubgoal(
-          subgoal.content,
-          draft.mainGoal,
-          siblings,
-          draft.language,
-          newTicket(),
+        const result = settle(
+          await generateActionsForSubgoal(
+            subgoal.content,
+            draft.mainGoal,
+            siblings,
+            draft.language,
+            newTicket(),
+          ),
         )
         if (result.ok) {
           setDraft((latest) =>
@@ -209,13 +214,15 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
           return
         }
 
-        const result = await analyzeDependencies(
-          actions,
-          subgoal.content,
-          current.mainGoal,
-          current.id,
-          current.language,
-          ticketId,
+        const result = settle(
+          await analyzeDependencies(
+            actions,
+            subgoal.content,
+            current.mainGoal,
+            current.id,
+            current.language,
+            ticketId,
+          ),
         )
 
         setAnalyzed((done) => new Set(done).add(subgoal.id))

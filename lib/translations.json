@@ -232,6 +232,9 @@
       "waitingOn": "대기 대상",
       "yes": "예",
       "noValue": "아니오"
+    },
+    "app": {
+      "stale": "앱이 새 버전으로 바뀌었습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요."
     }
   },
   "en": {
@@ -467,6 +470,9 @@
       "waitingOn": "waiting_on",
       "yes": "yes",
       "noValue": "no"
+    },
+    "app": {
+      "stale": "The app has been updated. Reload the page and try again."
     }
   },
   "fi": {
@@ -702,6 +708,9 @@
       "waitingOn": "odottaa",
       "yes": "kyllä",
       "noValue": "ei"
+    },
+    "app": {
+      "stale": "Sovellus on päivittynyt. Lataa sivu uudelleen ja yritä uudestaan."
     }
   }
 }
