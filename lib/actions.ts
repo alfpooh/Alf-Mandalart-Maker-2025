@@ -1,176 +1,373 @@
 "use server"
 
-import { groq } from "@ai-sdk/groq"
-import { generateText } from "ai"
+import { generateObject } from "ai"
+import type { z } from "zod"
+import {
+  modelFor,
+  providerOptionsFor,
+  TASK_TIMEOUT_MS,
+  type AiTask,
+} from "./ai/models"
+import { withSlot } from "./ai/queue"
+import {
+  actionsPrompt,
+  dependenciesPrompt,
+  progressPrompt,
+  refinePrompt,
+  reviewPrompt,
+  subgoalsPrompt,
+} from "./ai/prompts"
+import {
+  actionsSchema,
+  dependenciesSchema,
+  progressSchema,
+  refineSchema,
+  reviewSchema,
+  subgoalsSchema,
+} from "./ai/schemas"
+import { breakCycles } from "./graph"
+import { snapToStage, type ActionDependency, type Language, type ProgressValue } from "./types"
 
-// Detect language of the input text
-function detectLanguage(text: string): string {
-  // Simple language detection - check for Korean characters
-  const koreanRegex = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/
-  if (koreanRegex.test(text)) {
-    return "Korean"
-  }
-  return "English"
+/**
+ * Every AI call returns this.
+ *
+ * The previous version manufactured placeholder text on failure and returned
+ * `success: true`, so a broken generation looked identical to a good one. With
+ * anonymous users limited to one Mandalart a day, that turns a transient API
+ * error into a wasted day. Failures are now reported as failures.
+ */
+export type AiResult<T> = { ok: true; data: T } | { ok: false; error: string }
+
+/**
+ * True when a failure is worth another attempt with the same input.
+ *
+ * Every model tried here occasionally returns something that does not match
+ * the schema — gpt-oss used to hand back the JSON Schema itself instead of
+ * data matching it, and the provider marked that non-retryable, so the SDK
+ * gave up. The very same request usually succeeds on the next try, so it is
+ * retryable in practice. Rate limits land here too: on a free tier a plan's
+ * calls outrun the per-minute allowance, and waiting is the fix, not failing.
+ */
+function isTransient(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  return /schema|json_validate|does not match|empty|rate.?limit|429|5\d\d/i.test(message)
 }
 
-export async function generateSubgoals(mainGoal: string) {
-  try {
-    const language = detectLanguage(mainGoal)
-    const languageInstruction =
-      language === "Korean" ? "모든 응답을 한국어로 작성하세요." : "Write all responses in English."
+const MAX_ATTEMPTS = 3
 
-    const { text } = await generateText({
-      model: groq("llama-3.1-8b-instant"),
-      prompt: `${languageInstruction}
+async function run<S extends z.ZodType>(
+  task: AiTask,
+  schema: S,
+  prompt: string,
+  ticketId: string,
+): Promise<AiResult<z.infer<S>>> {
+  let lastError: unknown
 
-Break down this main goal into exactly 8 specific, actionable subgoals: "${mainGoal}"
-
-Each subgoal should be:
-- Specific and measurable
-- Directly contributing to the main goal
-- Actionable and realistic
-- Distinct from the other subgoals
-- Written as a clear goal statement
-
-Format your response as a numbered list with exactly 8 items, one subgoal per line.
-1. First subgoal
-2. Second subgoal
-...and so on.
-
-Do not include any other text or explanations.`,
-    })
-
-    // Parse the numbered list response
-    const lines = text.split("\n").filter((line) => line.trim() !== "")
-    const subgoals = lines
-      .map((line) => {
-        // Remove numbers and any leading characters
-        const match = line.match(/^\d+\.\s*(.+)$/)
-        return match ? match[1].trim() : line.trim()
-      })
-      .filter(Boolean)
-      .slice(0, 8) // Ensure we have at most 8 items
-
-    // If we don't have enough subgoals, add generic ones
-    while (subgoals.length < 8) {
-      const genericText =
-        language === "Korean"
-          ? `${mainGoal}을(를) 위한 추가 단계 (${subgoals.length + 1})`
-          : `Additional step for: ${mainGoal} (${subgoals.length + 1})`
-      subgoals.push(genericText)
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      // Waiting for a slot happens per attempt, so a retry after a rate limit
+      // goes to the back of the queue instead of jumping ahead of newcomers.
+      const { object } = await withSlot(ticketId, () =>
+        generateObject({
+          model: modelFor(task),
+          schema,
+          prompt,
+          providerOptions: providerOptionsFor(task),
+        // Rate-limit rejections are retryable and the window is short; the
+        // SDK's default of 2 gives up while the batch is still contending.
+          maxRetries: 5,
+          abortSignal: AbortSignal.timeout(TASK_TIMEOUT_MS[task]),
+        }),
+      )
+      return { ok: true, data: object }
+    } catch (error) {
+      lastError = error
+      if (attempt === MAX_ATTEMPTS || !isTransient(error)) break
+      console.warn(`[ai:${task}] attempt ${attempt} failed, retrying`)
+      // A short pause also lets a rate-limit window move on.
+      await new Promise((resolve) => setTimeout(resolve, 400 * attempt))
     }
-
-    return { success: true, subgoals }
-  } catch (error) {
-    console.error("Error generating subgoals:", error)
-
-    const language = detectLanguage(mainGoal)
-
-    // Fallback: generate default subgoals if all AI approaches fail
-    const fallbackSubgoals =
-      language === "Korean"
-        ? [
-            `${mainGoal} 계획 및 준비`,
-            `${mainGoal} 요구사항 조사`,
-            `${mainGoal}에 필요한 기술 개발`,
-            `${mainGoal}을 위한 자원 생성`,
-            `${mainGoal}을 향한 행동 단계`,
-            `${mainGoal}을 위한 추진력 구축`,
-            `${mainGoal} 진행상황 모니터링`,
-            `${mainGoal} 완료 및 달성`,
-          ]
-        : [
-            `Plan and prepare for: ${mainGoal}`,
-            `Research requirements for: ${mainGoal}`,
-            `Develop skills needed for: ${mainGoal}`,
-            `Create resources for: ${mainGoal}`,
-            `Take action steps toward: ${mainGoal}`,
-            `Build momentum for: ${mainGoal}`,
-            `Monitor progress on: ${mainGoal}`,
-            `Complete and achieve: ${mainGoal}`,
-          ]
-
-    return { success: true, subgoals: fallbackSubgoals }
   }
+
+  console.error(`[ai:${task}]`, lastError)
+  return { ok: false, error: describeFailure(lastError) }
 }
 
-export async function generateDetailedActions(subgoal: string, mainGoal: string) {
-  try {
-    const language = detectLanguage(mainGoal)
-    const languageInstruction =
-      language === "Korean" ? "모든 응답을 한국어로 작성하세요." : "Write all responses in English."
+/** Maps a thrown error onto a translation key the UI can render. */
+function describeFailure(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error)
+  if (/abort|timeout/i.test(message)) return "ai.error.timeout"
+  if (/rate.?limit|429/i.test(message)) return "ai.error.rateLimit"
+  if (/schema|validat|parse/i.test(message)) return "ai.error.malformed"
+  return "ai.error.generic"
+}
 
-    const { text } = await generateText({
-      model: groq("llama-3.1-8b-instant"),
-      prompt: `${languageInstruction}
+// ---------------------------------------------------------------------------
+// Generation
+// ---------------------------------------------------------------------------
 
-For the subgoal "${subgoal}" which contributes to the main goal "${mainGoal}", generate exactly 8 specific, actionable steps or tasks.
+export async function generateSubgoals(
+  mainGoal: string,
+  language: Language,
+  ticketId: string,
+): Promise<AiResult<string[]>> {
+  const result = await run(
+    "subgoals",
+    subgoalsSchema,
+    subgoalsPrompt(mainGoal, language),
+    ticketId,
+  )
+  if (!result.ok) return result
+  return { ok: true, data: result.data.subgoals.map((s) => s.content) }
+}
 
-Each action should be:
-- Very specific and concrete
-- Something that can be completed in a reasonable timeframe
-- Directly supporting the subgoal
-- Measurable or observable
-- Written as a clear action statement
+export interface GeneratedAction {
+  content: string
+  metric: string | null
+}
 
-Format your response as a numbered list with exactly 8 items, one action per line.
-1. First action
-2. Second action
-...and so on.
+export async function generateActionsForSubgoal(
+  subgoal: string,
+  mainGoal: string,
+  siblingSubgoals: string[],
+  language: Language,
+  ticketId: string,
+): Promise<AiResult<GeneratedAction[]>> {
+  const result = await run(
+    "actions",
+    actionsSchema,
+    actionsPrompt(subgoal, mainGoal, siblingSubgoals, language),
+    ticketId,
+  )
+  if (!result.ok) return result
+  return { ok: true, data: result.data.actions }
+}
 
-Do not include any other text or explanations.`,
+export interface SubgoalActions {
+  subgoalIndex: number
+  actions: GeneratedAction[] | null
+  error: string | null
+}
+
+/**
+ * All eight subgoals at once.
+ *
+ * The old code awaited these in a loop — eight sequential round trips behind a
+ * single spinner. Running them together makes the wait one round trip instead
+ * of eight. A subgoal that fails is reported on its own so the user can retry
+ * just that area rather than starting over.
+ */
+export async function generateAllActions(
+  subgoals: string[],
+  mainGoal: string,
+  language: Language,
+  ticketId: string,
+): Promise<SubgoalActions[]> {
+  // Fired together; the shared queue decides how many actually run at once.
+  return Promise.all(
+    subgoals.map(async (subgoal, index) => {
+      const siblings = subgoals.filter((_, i) => i !== index)
+      const result = await generateActionsForSubgoal(
+        subgoal,
+        mainGoal,
+        siblings,
+        language,
+        ticketId,
+      )
+      return result.ok
+        ? { subgoalIndex: index, actions: result.data, error: null }
+        : { subgoalIndex: index, actions: null, error: result.error }
+    }),
+  )
+}
+
+/** Regenerates one cell. The old reject button rebuilt all eight to use one. */
+export async function refineCell(
+  content: string,
+  context: { mainGoal: string; subgoal?: string },
+  mode: "specific" | "measurable" | "smaller" | "alternatives",
+  language: Language,
+  ticketId: string,
+): Promise<AiResult<{ content: string; rationale: string }[]>> {
+  const result = await run(
+    "refine",
+    refineSchema,
+    refinePrompt(content, context, mode, language),
+    ticketId,
+  )
+  if (!result.ok) return result
+  return { ok: true, data: result.data.suggestions }
+}
+
+// ---------------------------------------------------------------------------
+// Dependencies
+// ---------------------------------------------------------------------------
+
+/**
+ * Prerequisites among one subgoal's eight actions.
+ *
+ * Scoped to a single area on purpose: asking about all 64 at once produces both
+ * worse relationships and far more cycles. Most real prerequisites live inside
+ * an area anyway.
+ *
+ * `actionIds` maps the indices the model returns back onto rows. Indices out of
+ * range are dropped rather than failing the call — a malformed edge is worth
+ * less than the other seven.
+ */
+export async function analyzeDependencies(
+  actions: { id: string; content: string }[],
+  subgoal: string,
+  mainGoal: string,
+  planId: string,
+  language: Language,
+  ticketId: string,
+): Promise<AiResult<ActionDependency[]>> {
+  const result = await run(
+    "dependencies",
+    dependenciesSchema,
+    dependenciesPrompt(
+      actions.map((a) => a.content),
+      subgoal,
+      mainGoal,
+      language,
+    ),
+    ticketId,
+  )
+  if (!result.ok) return result
+
+  const edges: ActionDependency[] = []
+  for (const raw of result.data.dependencies) {
+    const from = actions[raw.action]
+    const to = actions[raw.dependsOn]
+    if (!from || !to || from.id === to.id) continue
+    edges.push({
+      actionId: from.id,
+      dependsOnId: to.id,
+      rationale: raw.rationale,
+      confidence: raw.confidence,
+      userEdited: false,
     })
+  }
 
-    // Parse the numbered list response
-    const lines = text.split("\n").filter((line) => line.trim() !== "")
-    const actions = lines
-      .map((line) => {
-        // Remove numbers and any leading characters
-        const match = line.match(/^\d+\.\s*(.+)$/)
-        return match ? match[1].trim() : line.trim()
-      })
-      .filter(Boolean)
-      .slice(0, 8) // Ensure we have at most 8 items
+  // Never hand back a graph the tracking view cannot walk.
+  const { edges: acyclic, removed } = breakCycles(edges)
+  if (removed.length > 0) {
+    console.warn(`[ai:dependencies] dropped ${removed.length} edge(s) for plan ${planId}`)
+  }
+  return { ok: true, data: acyclic }
+}
 
-    // If we don't have enough actions, add generic ones
-    while (actions.length < 8) {
-      const genericText =
-        language === "Korean"
-          ? `${subgoal}을(를) 위한 추가 단계 (${actions.length + 1})`
-          : `Additional step for: ${subgoal} (${actions.length + 1})`
-      actions.push(genericText)
-    }
+export interface SubgoalDependencies {
+  subgoalIndex: number
+  dependencies: ActionDependency[] | null
+  error: string | null
+}
 
-    return { success: true, actions }
-  } catch (error) {
-    console.error("Error generating detailed actions:", error)
+/**
+ * Prerequisites for every area at once.
+ *
+ * Eight scoped calls rather than one over all 64: a model asked to order 64
+ * items produces both weaker relationships and far more cycles, and most real
+ * prerequisites sit inside a single area anyway. An area that fails simply
+ * contributes no edges — the other seven are still useful.
+ */
+export async function analyzeAllDependencies(
+  subgoals: { id: string; content: string }[],
+  actionsBySubgoal: Record<string, { id: string; content: string }[]>,
+  mainGoal: string,
+  planId: string,
+  language: Language,
+  ticketId: string,
+): Promise<SubgoalDependencies[]> {
+  return Promise.all(
+    subgoals.map(async (subgoal, index) => {
+      const actions = actionsBySubgoal[subgoal.id] ?? []
+      if (actions.length === 0) {
+        return { subgoalIndex: index, dependencies: [], error: null }
+      }
+      const result = await analyzeDependencies(
+        actions,
+        subgoal.content,
+        mainGoal,
+        planId,
+        language,
+        ticketId,
+      )
+      return result.ok
+        ? { subgoalIndex: index, dependencies: result.data, error: null }
+        : { subgoalIndex: index, dependencies: null, error: result.error }
+    }),
+  )
+}
 
-    const language = detectLanguage(mainGoal)
+// ---------------------------------------------------------------------------
+// Progress
+// ---------------------------------------------------------------------------
 
-    // Fallback: generate default actions if all AI approaches fail
-    const fallbackActions =
-      language === "Korean"
-        ? [
-            `${subgoal} 조사 및 계획`,
-            `${subgoal}을 위한 구체적 목표 설정`,
-            `${subgoal}을 위한 일정 생성`,
-            `${subgoal}에 필요한 자원 식별`,
-            `${subgoal}을 향한 첫 번째 행동 단계`,
-            `${subgoal} 진행상황 모니터링`,
-            `${subgoal}을 위한 전략 조정`,
-            `${subgoal} 완료 및 평가`,
-          ]
-        : [
-            `Research and plan for: ${subgoal}`,
-            `Set specific targets for: ${subgoal}`,
-            `Create timeline for: ${subgoal}`,
-            `Identify resources needed for: ${subgoal}`,
-            `Take first action step toward: ${subgoal}`,
-            `Monitor progress on: ${subgoal}`,
-            `Adjust strategy for: ${subgoal}`,
-            `Complete and evaluate: ${subgoal}`,
-          ]
+export interface ProgressReading {
+  progress: ProgressValue
+  rationale: string
+  confidence: number
+  /** True when the reading is too uncertain to apply without asking. */
+  needsConfirmation: boolean
+}
 
-    return { success: true, actions: fallbackActions }
+/**
+ * Reads a free-text progress note as a percentage.
+ *
+ * The caller always shows this to the user before saving. Progress is a
+ * self-assessment; a model that quietly revises it down loses trust in one
+ * step, so this proposes and the person decides.
+ */
+export async function readProgressFromText(
+  note: string,
+  action: { content: string; metric: string | null; current: ProgressValue },
+  language: Language,
+  ticketId: string,
+): Promise<AiResult<ProgressReading>> {
+  const result = await run(
+    "progress",
+    progressSchema,
+    progressPrompt(note, action, language),
+    ticketId,
+  )
+  if (!result.ok) return result
+
+  const progress = snapToStage(result.data.progress)
+  return {
+    ok: true,
+    data: {
+      progress,
+      rationale: result.data.rationale,
+      confidence: result.data.confidence,
+      needsConfirmation: result.data.confidence < 0.5,
+    },
   }
 }
+
+// ---------------------------------------------------------------------------
+// Whole-plan review
+// ---------------------------------------------------------------------------
+
+export async function reviewPlan(
+  mainGoal: string,
+  subgoals: string[],
+  actions: string[],
+  language: Language,
+  ticketId: string,
+): Promise<
+  AiResult<{
+    duplicates: { actions: number[]; note: string }[]
+    imbalance: string[]
+    weeklyHoursEstimate: number
+    missing: string[]
+  }>
+> {
+  return run(
+    "review",
+    reviewSchema,
+    reviewPrompt(mainGoal, subgoals, actions, language),
+    ticketId,
+  )
+}
+

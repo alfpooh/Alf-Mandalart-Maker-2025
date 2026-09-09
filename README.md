@@ -2,10 +2,11 @@
 
 Produced by D.H. Alf Bae, 2025
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+Turn one goal into eight areas and sixty-four concrete actions — then find out
+which of them you can start today.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/alfpoohs-projects/v0-mandalart-goal-planner)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/p2iFebJoKy0)
+한 개의 목표를 8개 영역과 64개 실행 항목으로 나누고, 그중 지금 바로
+시작할 수 있는 것이 무엇인지 알려줍니다.
 
 ---
 
@@ -155,11 +156,21 @@ Tekniikka käyttää 9x9-ruudukkojärjestelmää, jossa pääasiallinen tavoite 
 
 ## 🚀 Features of This App | 이 앱의 기능 | Tämän sovelluksen ominaisuudet
 
-- **AI-Powered Goal Generation** - Get intelligent suggestions for sub-goals and actions
-- **Multi-Language Support** - Available in English, Korean, and Finnish
-- **Beautiful Visualization** - See your Mandalart in an elegant, color-coded grid
-- **PDF Export** - Download your completed Mandalart as a PDF
-- **Responsive Design** - Works perfectly on desktop, tablet, and mobile
+- **AI breakdown** — one goal becomes eight areas, then sixty-four actions,
+  most with a measure of what "done" looks like.
+- **What to start today** — the actions are analysed for real prerequisites, so
+  the ones nothing is blocking are surfaced first. Sixty-four at once is why
+  plans get made and never begun.
+- **The grid, readable** — a 9×9 that fits a phone, drilling down area by area
+  rather than shrinking past legibility.
+- **Exports** — PDF (with Korean text that actually renders), PowerPoint,
+  a high-resolution PNG, Markdown with checkboxes, and CSV carrying the
+  dependency result for a task manager.
+- **Accounts** — anonymous visitors get two Mandalarts a day; signing in with
+  Google keeps them and unlocks the exports. Work made while signed out moves
+  to the account rather than being lost.
+- **Three languages** — Korean, English, Finnish, in the interface *and* in
+  what the model writes.
 
 ---
 
@@ -170,13 +181,58 @@ For a deeper understanding of the Mandalart technique, read this comprehensive a
 
 ---
 
-## 🛠️ Deployment | 배포 | Käyttöönotto
+## 🛠️ Running it | 실행하기 | Käyttöönotto
 
-Your project is live at:
-**[https://vercel.com/alfpoohs-projects/v0-mandalart-goal-planner](https://vercel.com/alfpoohs-projects/v0-mandalart-goal-planner)**
+```bash
+npm install
+cp .env.example .env.local   # then fill it in — see below
+npm run dev
+```
 
-Continue building your app on:
-**[https://v0.dev/chat/projects/p2iFebJoKy0](https://v0.dev/chat/projects/p2iFebJoKy0)**
+### What it needs
+
+Only one variable is required. Everything else adds capability.
+
+| Variable | Required | What it does |
+|---|---|---|
+| `GOOGLE_GENERATIVE_AI_API_KEY` | **yes** | Generation, via Gemini. Without it nothing can be created. [Get one here.](https://aistudio.google.com/apikey) |
+| `NEXT_PUBLIC_SUPABASE_URL` | no | Accounts and saving |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | no | Supabase's *publishable* key (`sb_publishable_…`) |
+| `SUPABASE_SERVICE_ROLE_KEY` | no | Supabase's *secret* key (`sb_secret_…`) — **server only** |
+| `ANON_QUOTA_SALT` | no | Salts the IP hash behind the daily limit |
+
+**Without Supabase the app still runs.** Plans live in the browser for 24
+hours, the account button is hidden, and there is no daily limit — a missing
+variable disables a feature rather than breaking the page.
+
+`supabase/SETUP.md` covers creating the project, applying `schema.sql`, and
+wiring Google sign-in.
+
+### Choosing a model
+
+Every model call resolves through `lib/ai/models.ts`, so no other file names a
+model. Six jobs are configured separately — generation runs on Gemini Flash,
+dependency analysis and whole-plan review on Pro — and each can be overridden:
+
+```
+AI_MODEL=gemini-flash-latest              # default for every job
+AI_MODEL_DEPENDENCIES=gemini-pro-latest   # just this one
+AI_CONCURRENCY=2                          # calls in flight at once
+```
+
+Providers sit behind the same seam. Groq is still wired up — `AI_PROVIDER=groq`
+with a `GROQ_API_KEY` switches back to gpt-oss — and adding a third is one
+entry in the `PROVIDERS` map plus its `@ai-sdk/*` package.
+
+Requests share a single server-side queue, so several people generating at once
+take turns instead of exceeding the provider's per-minute allowance together.
+
+### Tests
+
+```bash
+npm test         # dependency graph, quota, queue
+npm run typecheck
+```
 
 ---
 
@@ -186,4 +242,4 @@ All rights reserved © D.H. Alf Bae, 2025
 
 ---
 
-*Built with ❤️ using [v0.dev](https://v0.dev) and deployed on [Vercel](https://vercel.com)*
+*Next.js · TypeScript · Tailwind · Gemini · Supabase*

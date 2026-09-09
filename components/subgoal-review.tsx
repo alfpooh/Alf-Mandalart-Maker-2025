@@ -1,18 +1,19 @@
 "use client"
+
+import { Check, Edit2, Save } from "lucide-react"
+
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Check, X, Edit2, Save } from "lucide-react"
-import type { MandalartCell } from "@/lib/types"
 import { useLanguage } from "@/lib/language-context"
+import { SUBGOAL_COUNT, type EditorCell } from "@/lib/types"
 
 interface SubgoalReviewProps {
   mainGoal: string
-  subgoals: MandalartCell[]
+  subgoals: EditorCell[]
   onSubgoalUpdate: (index: number, content: string) => void
   onSubgoalConfirm: (index: number) => void
-  onSubgoalReject: (index: number) => void
   onAllConfirmed: () => void
   onStartEdit: (index: number) => void
   onSaveEdit: (index: number) => void
@@ -24,7 +25,6 @@ export function SubgoalReview({
   subgoals,
   onSubgoalUpdate,
   onSubgoalConfirm,
-  onSubgoalReject,
   onAllConfirmed,
   onStartEdit,
   onSaveEdit,
@@ -32,11 +32,11 @@ export function SubgoalReview({
 }: SubgoalReviewProps) {
   const { t } = useLanguage()
   const confirmedCount = subgoals.filter((sg) => sg.isConfirmed).length
-  const allConfirmed = confirmedCount === 8
+  const allConfirmed = confirmedCount === SUBGOAL_COUNT
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-6xl mx-auto">
+      <div className="mx-auto max-w-6xl">
         <Card className="mb-6">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold">{t("subgoalReview.title")}</CardTitle>
@@ -44,11 +44,11 @@ export function SubgoalReview({
               {t("subgoalReview.mainGoal")} <span className="font-semibold">{mainGoal}</span>
             </p>
             <div className="flex flex-col items-center gap-3">
-              <Badge variant="outline" className="mx-auto">
-                {confirmedCount}/8 {t("subgoalReview.progress")}
+              <Badge variant="outline" className="mx-auto tabular-nums">
+                {confirmedCount}/{SUBGOAL_COUNT} {t("subgoalReview.progress")}
               </Badge>
-              {confirmedCount < 8 && (
-                <Button onClick={onAcceptAll} variant="outline" className="px-6 bg-transparent">
+              {!allConfirmed && (
+                <Button onClick={onAcceptAll} variant="outline" className="bg-transparent px-6">
                   {t("subgoalReview.acceptAll")}
                 </Button>
               )}
@@ -56,64 +56,69 @@ export function SubgoalReview({
           </CardHeader>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-[30px] mb-6">
+        <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
           {subgoals.map((subgoal, index) => (
             <Card
               key={subgoal.id}
               className={`transition-all ${
-                subgoal.isConfirmed ? "ring-2 ring-green-500 bg-green-50" : "hover:shadow-md"
+                subgoal.isConfirmed ? "bg-green-50 ring-2 ring-green-500" : "hover:shadow-md"
               }`}
             >
               <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="text-sm text-gray-500 mb-2">
-                      {t("subgoalReview.subgoal")} {index + 1}
-                    </div>
-                    {subgoal.isEditing ? (
-                      <Input
-                        value={subgoal.content}
-                        onChange={(e) => onSubgoalUpdate(index, e.target.value)}
-                        className="mb-3"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            onSaveEdit(index)
-                          }
-                        }}
-                      />
-                    ) : (
-                      <p className="text-gray-800 mb-3">{subgoal.content}</p>
-                    )}
-                  </div>
+                <div className="mb-2 text-sm text-gray-500">
+                  {t("subgoalReview.subgoal")} {index + 1}
                 </div>
+
+                {subgoal.isEditing ? (
+                  <Input
+                    value={subgoal.content}
+                    onChange={(e) => onSubgoalUpdate(index, e.target.value)}
+                    className="mb-3"
+                    autoFocus
+                    aria-label={`${t("subgoalReview.subgoal")} ${index + 1}`}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") onSaveEdit(index)
+                    }}
+                  />
+                ) : (
+                  <p className="mb-3 text-gray-800">{subgoal.content}</p>
+                )}
 
                 <div className="flex gap-2">
                   {subgoal.isEditing ? (
                     <Button size="sm" onClick={() => onSaveEdit(index)} className="flex-1">
-                      <Save className="w-4 h-4 mr-1" />
+                      <Save className="mr-1 h-4 w-4" aria-hidden="true" />
                       {t("subgoalReview.save")}
                     </Button>
                   ) : subgoal.isConfirmed ? (
-                    <div className="flex gap-2 w-full">
+                    <div className="flex w-full gap-2">
                       <Badge variant="default" className="flex-1 justify-center">
-                        <Check className="w-4 h-4 mr-1" />
+                        <Check className="mr-1 h-4 w-4" aria-hidden="true" />
                         {t("subgoalReview.confirmed")}
                       </Badge>
-                      <Button size="sm" variant="outline" onClick={() => onStartEdit(index)}>
-                        <Edit2 className="w-4 h-4" />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onStartEdit(index)}
+                        aria-label={`${t("subgoalReview.edit")} ${index + 1}`}
+                      >
+                        <Edit2 className="h-4 w-4" aria-hidden="true" />
                       </Button>
                     </div>
                   ) : (
                     <>
-                      <Button size="sm" variant="outline" onClick={() => onStartEdit(index)} className="flex-1">
-                        <Edit2 className="w-4 h-4 mr-1" />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onStartEdit(index)}
+                        className="flex-1"
+                      >
+                        <Edit2 className="mr-1 h-4 w-4" aria-hidden="true" />
                         {t("subgoalReview.edit")}
                       </Button>
-                      <Button size="sm" variant="destructive" onClick={() => onSubgoalReject(index)}>
-                        <X className="w-4 h-4" />
-                      </Button>
                       <Button size="sm" onClick={() => onSubgoalConfirm(index)}>
-                        <Check className="w-4 h-4" />
+                        <Check className="mr-1 h-4 w-4" aria-hidden="true" />
+                        {t("subgoalReview.confirm")}
                       </Button>
                     </>
                   )}

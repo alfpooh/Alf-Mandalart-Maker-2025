@@ -20,18 +20,34 @@
       "save": "저장",
       "confirmed": "확인됨",
       "edit": "편집",
-      "generateActions": "상세 액션 생성하기"
+      "generateActions": "상세 액션 생성하기",
+      "confirm": "확정"
     },
     "detailedActions": {
       "title": "상세 액션 검토하기",
       "mainGoal": "메인 목표:",
       "progress": "개 액션 확인됨",
       "acceptAll": "모든 액션 확인",
-      "generating": "각 서브목표에 대한 상세 액션 생성 중..."
+      "generating": "각 서브목표에 대한 상세 액션 생성 중...",
+      "failed": "개 영역의 생성이 실패했습니다",
+      "retry": "다시 시도",
+      "empty": "이 영역의 액션이 없습니다. 다시 생성하거나 직접 8개까지 입력할 수 있습니다.",
+      "action": "액션",
+      "metric": "측정 기준",
+      "save": "저장",
+      "edit": "수정",
+      "complete": "만다라트 완성하기",
+      "addAction": "액션 추가",
+      "addManually": "직접 입력하기",
+      "remove": "삭제",
+      "regenerateArea": "이 영역 다시 생성",
+      "regenerating": "생성 중...",
+      "regenerate": "다시 생성",
+      "confirmRegenerate": "이 영역의 액션을 새로 만듭니다. 지금까지 확인하거나 수정한 내용은 사라집니다. 계속할까요?",
+      "dismiss": "닫기"
     },
     "visualization": {
       "title": "만다라트 시각화",
-      "txtDownload": "TXT 다운로드",
       "print": "인쇄하기",
       "pdfDownload": "PDF 다운로드",
       "pdfGenerating": "PDF 생성 중...",
@@ -47,7 +63,7 @@
       "topSections": "상단 섹션",
       "middleSections": "중간 섹션",
       "bottomSections": "하단 섹션",
-      "restart": "다시 시작",
+      "restart": "새 만다라트 만들기",
       "editContent": "내용 편집",
       "currentContent": "현재 내용:",
       "enterMainGoal": "메인 목표를 입력하세요...",
@@ -61,7 +77,161 @@
         "subgoal": "서브목표",
         "action": "액션 아이템",
         "cell": "셀"
+      },
+      "back": "뒤로",
+      "exportsLocked": "내보내기 (계정 필요)",
+      "pdfFailed": "PDF를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      "pptxDownload": "PPT 다운로드",
+      "pptxGenerating": "PPT 만드는 중...",
+      "pptxFailed": "PPT를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      "pptxNoOrder": "선후관계가 없어 모든 항목을 지금 시작할 수 있습니다.",
+      "pptxDeck": "만다라트 실행 계획",
+      "pptxOverview": "전체 만다라트",
+      "pngDownload": "이미지 저장",
+      "pngGenerating": "이미지 만드는 중...",
+      "mdDownload": "Markdown",
+      "csvDownload": "CSV",
+      "exportFailed": "파일을 만들지 못했습니다. 잠시 후 다시 시도해 주세요."
+    },
+    "generating": {
+      "title": "각 영역의 액션을 만들고 있습니다",
+      "progress": "영역 완료"
+    },
+    "drafts": {
+      "title": "작성 중인 만다라트",
+      "delete": "삭제",
+      "note": "이 기기의 브라우저에만 저장되며 24시간 후 사라집니다.",
+      "step": {
+        "review-subgoals": "서브목표 검토 중",
+        "generating-actions": "액션 생성 중",
+        "review-actions": "액션 검토 중",
+        "visualization": "완성"
       }
+    },
+    "plan": {
+      "notFound": "만다라트를 찾을 수 없습니다",
+      "saveFailed": "저장하지 못했습니다. 만다라트는 이 브라우저에 남아 있습니다.",
+      "claimFailed": "계정으로 옮기지 못했습니다. 만다라트는 이 브라우저에 그대로 있습니다.",
+      "draftExpired": "임시 보관 기간(24시간)이 지났습니다."
+    },
+    "ai": {
+      "error": {
+        "timeout": "응답이 너무 오래 걸립니다. 다시 시도해 주세요.",
+        "rateLimit": "AI 사용량이 잠시 한도에 도달했습니다. 1분쯤 뒤에 다시 시도해 주세요.",
+        "malformed": "AI 응답을 읽지 못했습니다. 다시 시도해 주세요.",
+        "generic": "생성에 실패했습니다. 다시 시도해 주세요."
+      }
+    },
+    "progress": {
+      "stage": {
+        "0": "미착수",
+        "10": "착수",
+        "25": "진행",
+        "50": "절반",
+        "75": "마무리",
+        "100": "완료"
+      }
+    },
+    "grid": {
+      "label": "만다라트 9x9 그리드",
+      "viewFull": "전체 보기",
+      "viewOverview": "중심 영역만",
+      "backToOverview": "중심으로",
+      "tapArea": "영역을 누르면 그 영역의 8가지 실행이 열립니다",
+      "narrowHint": "화면이 좁아 글자가 작습니다"
+    },
+    "auth": {
+      "signIn": "Google로 계속하기",
+      "signOut": "로그아웃",
+      "claiming": "만다라트를 계정으로 옮기는 중...",
+      "claimFailed": "옮기지 못했습니다",
+      "unconfigured": "계정 기능이 아직 설정되지 않았습니다",
+      "failed": "로그인에 실패했습니다",
+      "required": "로그인이 필요합니다"
+    },
+    "quota": {
+      "anonExhausted": "오늘 만들 수 있는 만다라트를 모두 사용했습니다. 계정을 만들면 이어서 만들 수 있고, 지금까지 만든 것도 저장됩니다.",
+      "userExhausted": "오늘의 생성 한도에 도달했습니다. 내일 다시 시도해 주세요."
+    },
+    "order": {
+      "analyzing": "실행 순서를 분석하고 있습니다",
+      "readyTitle": "지금 바로 시작할 수 있는 {n}가지",
+      "readyHint": "선행 조건이 없어 오늘 착수할 수 있는 항목입니다.",
+      "showAllReady": "{n}개 전부 보기",
+      "showFewer": "접기",
+      "blockedTitle": "다른 항목을 기다리는 {n}가지",
+      "waitsFor": "대기:",
+      "unlink": "이 선후관계 해제"
+    },
+    "teaser": {
+      "close": "닫기",
+      "back": "이전",
+      "next": "다음",
+      "later": "나중에",
+      "order": {
+        "title": "지금 바로 시작할 수 있는 것",
+        "body": "64개를 한꺼번에 보면 아무것도 시작하지 못합니다. 선후관계를 분석해 오늘 착수 가능한 것만 앞에 세웠습니다."
+      },
+      "tracking": {
+        "title": "같은 그림 위에서 진행 확인",
+        "body": "별도 대시보드가 아니라, 방금 만든 그 9×9 위에 진행률이 얹힙니다. 어느 영역이 방치되는지 한눈에 드러납니다.",
+        "sampleNotice": "아래 진행률은 기능을 보여주기 위한 예시입니다. 실제 계획은 그대로입니다."
+      },
+      "progress": {
+        "title": "문장으로 적으면 퍼센트로",
+        "body": "퍼센트를 고르는 대신 무슨 일이 있었는지 쓰면 됩니다. 실제로 한 번 해보세요 — 아래는 방금 만든 실행 항목입니다.",
+        "label": "진행 상황을 적어보세요",
+        "example": "자료조사는 끝냈고 초안을 절반쯤 썼습니다.",
+        "convert": "퍼센트로 변환",
+        "converting": "변환 중...",
+        "youDecide": "AI는 제안만 합니다. 기록은 늘 본인이 확정합니다."
+      },
+      "export": {
+        "title": "발표하고 공유하기",
+        "body": "완성한 만다라트를 PDF·인쇄물로 내보내고 링크로 공유할 수 있습니다.",
+        "locked": "계정이 필요합니다"
+      },
+      "signin": {
+        "title": "계정을 만들면",
+        "body": "지금까지 만든 만다라트가 그대로 옮겨집니다.",
+        "benefit": {
+          "keep": "이 만다라트가 영구 저장됩니다 (지금은 24시간 후 사라집니다)",
+          "order": "실행 순서를 언제든 다시 확인할 수 있습니다",
+          "track": "진행 상황을 기록하고 정체된 영역을 알려줍니다",
+          "export": "PDF·인쇄·공유 링크가 열립니다"
+        },
+        "reassure": "만다라트를 만들 때 쓴 내용 외에 추가로 요구하는 정보는 없습니다."
+      }
+    },
+    "queue": {
+      "ahead": "앞에 {n}명이 먼저 생성 중입니다",
+      "turns": "순서대로 처리 중 · {n}개 남음",
+      "why": "AI 사용량 한도를 넘지 않도록 순서대로 처리합니다.",
+      "shared": "다른 사용자와 순서를 나눠 쓰는 중입니다. 곧 이어집니다."
+    },
+    "header": {
+      "title": "만다라트 목표 플래너",
+      "newPlan": "새 만다라트",
+      "confirmLeave": "생성이 진행 중입니다. 지금 나가면 이번 생성은 취소되고 오늘 사용량은 되돌아오지 않습니다. 나가시겠습니까?"
+    },
+    "steps": {
+      "label": "만다라트 작성 단계",
+      "goal": "목표",
+      "subgoals": "서브목표",
+      "actions": "액션",
+      "done": "완성",
+      "backTo": "이 단계로 돌아가기"
+    },
+    "csv": {
+      "areaNo": "영역번호",
+      "area": "영역",
+      "no": "번호",
+      "action": "실행 항목",
+      "progress": "진행률",
+      "ready": "지금 가능",
+      "waitingOn": "대기 대상",
+      "yes": "예",
+      "noValue": "아니오"
     }
   },
   "en": {
@@ -85,18 +255,34 @@
       "save": "Save",
       "confirmed": "Confirmed",
       "edit": "Edit",
-      "generateActions": "Generate Detailed Actions"
+      "generateActions": "Generate Detailed Actions",
+      "confirm": "Confirm"
     },
     "detailedActions": {
       "title": "Review Detailed Actions",
       "mainGoal": "Main Goal:",
       "progress": "Actions Confirmed",
       "acceptAll": "Accept All Actions",
-      "generating": "Generating detailed actions for each subgoal..."
+      "generating": "Generating detailed actions for each subgoal...",
+      "failed": "area(s) failed to generate",
+      "retry": "Try again",
+      "empty": "No actions for this area. Regenerate it, or write up to eight yourself.",
+      "action": "Action",
+      "metric": "Metric",
+      "save": "Save",
+      "edit": "Edit",
+      "complete": "Finish Mandalart",
+      "addAction": "Add action",
+      "addManually": "Write them myself",
+      "remove": "Delete",
+      "regenerateArea": "Regenerate this area",
+      "regenerating": "Generating...",
+      "regenerate": "Regenerate",
+      "confirmRegenerate": "This rewrites every action in this area. What you have confirmed or edited here will be lost. Continue?",
+      "dismiss": "Dismiss"
     },
     "visualization": {
       "title": "Mandalart Visualization",
-      "txtDownload": "Download TXT",
       "print": "Print",
       "pdfDownload": "Download PDF",
       "pdfGenerating": "Generating PDF...",
@@ -112,7 +298,7 @@
       "topSections": "Top Sections",
       "middleSections": "Middle Sections",
       "bottomSections": "Bottom Sections",
-      "restart": "Restart",
+      "restart": "Make another Mandalart",
       "editContent": "Edit Content",
       "currentContent": "Current Content:",
       "enterMainGoal": "Enter your main goal...",
@@ -126,7 +312,161 @@
         "subgoal": "Subgoal",
         "action": "Action Item",
         "cell": "Cell"
+      },
+      "back": "Back",
+      "exportsLocked": "Exports (account)",
+      "pdfFailed": "Couldn't build the PDF. Please try again.",
+      "pptxDownload": "PowerPoint",
+      "pptxGenerating": "Building deck...",
+      "pptxFailed": "Couldn't build the deck. Please try again.",
+      "pptxNoOrder": "Nothing depends on anything else — all of it can start now.",
+      "pptxDeck": "Mandalart action plan",
+      "pptxOverview": "The whole Mandalart",
+      "pngDownload": "Image",
+      "pngGenerating": "Rendering...",
+      "mdDownload": "Markdown",
+      "csvDownload": "CSV",
+      "exportFailed": "Couldn't create the file. Please try again."
+    },
+    "generating": {
+      "title": "Filling in the actions for each area",
+      "progress": "areas done"
+    },
+    "drafts": {
+      "title": "Mandalarts in progress",
+      "delete": "Delete",
+      "note": "Saved only in this browser, and cleared after 24 hours.",
+      "step": {
+        "review-subgoals": "Reviewing areas",
+        "generating-actions": "Generating actions",
+        "review-actions": "Reviewing actions",
+        "visualization": "Complete"
       }
+    },
+    "plan": {
+      "notFound": "Mandalart not found",
+      "saveFailed": "Couldn't save to your account. The Mandalart is still in this browser.",
+      "claimFailed": "Couldn't move it to your account. The Mandalart is still in this browser.",
+      "draftExpired": "The 24-hour holding window has passed."
+    },
+    "ai": {
+      "error": {
+        "timeout": "That took too long. Please try again.",
+        "rateLimit": "The AI is briefly over its per-minute allowance. Try again in about a minute.",
+        "malformed": "Couldn't read the AI response. Please try again.",
+        "generic": "Generation failed. Please try again."
+      }
+    },
+    "progress": {
+      "stage": {
+        "0": "Not started",
+        "10": "Started",
+        "25": "Underway",
+        "50": "Halfway",
+        "75": "Nearly done",
+        "100": "Done"
+      }
+    },
+    "grid": {
+      "label": "Mandalart 9x9 grid",
+      "viewFull": "Full grid",
+      "viewOverview": "Centre only",
+      "backToOverview": "Back to centre",
+      "tapArea": "Tap an area to open its eight actions",
+      "narrowHint": "Text is small at this width"
+    },
+    "auth": {
+      "signIn": "Continue with Google",
+      "signOut": "Sign out",
+      "claiming": "Moving your Mandalart to your account...",
+      "claimFailed": "Couldn't move it",
+      "unconfigured": "Accounts are not set up yet",
+      "failed": "Sign-in failed",
+      "required": "Sign in required"
+    },
+    "quota": {
+      "anonExhausted": "That's today's Mandalart. Create an account to keep going — and to keep the one you just made.",
+      "userExhausted": "You've hit today's limit. Try again tomorrow."
+    },
+    "order": {
+      "analyzing": "Working out what comes first",
+      "readyTitle": "{n} you can start right now",
+      "readyHint": "Nothing stands in front of these — they can begin today.",
+      "showAllReady": "Show all {n}",
+      "showFewer": "Show fewer",
+      "blockedTitle": "{n} waiting on something else",
+      "waitsFor": "Waits for:",
+      "unlink": "Remove this prerequisite"
+    },
+    "teaser": {
+      "close": "Close",
+      "back": "Back",
+      "next": "Next",
+      "later": "Maybe later",
+      "order": {
+        "title": "What you can start today",
+        "body": "Sixty-four at once is why plans never begin. These have nothing in front of them."
+      },
+      "tracking": {
+        "title": "Progress on the same picture",
+        "body": "Not a separate dashboard — progress sits on the very grid you just built, so a neglected area is visible at a glance.",
+        "sampleNotice": "The figures below are an example, to show how it looks. Your plan is unchanged."
+      },
+      "progress": {
+        "title": "Write a sentence, get a percentage",
+        "body": "Instead of picking a number, say what happened. Try it — this is one of your own actions.",
+        "label": "Describe your progress",
+        "example": "I've finished the research and written about half the draft.",
+        "convert": "Convert to a percentage",
+        "converting": "Converting...",
+        "youDecide": "The model only proposes. You always confirm what gets recorded."
+      },
+      "export": {
+        "title": "Present it and share it",
+        "body": "Export the finished Mandalart as a PDF or a printout, and share it by link.",
+        "locked": "Needs an account"
+      },
+      "signin": {
+        "title": "With an account",
+        "body": "The Mandalart you just made comes with you.",
+        "benefit": {
+          "keep": "This Mandalart is kept for good (right now it goes in 24 hours)",
+          "order": "Come back to the running order whenever you like",
+          "track": "Record progress and get told which areas have stalled",
+          "export": "PDF, printing and share links open up"
+        },
+        "reassure": "Nothing is asked of you beyond what you already wrote."
+      }
+    },
+    "queue": {
+      "ahead": "{n} ahead of you",
+      "turns": "Taking turns · {n} left",
+      "why": "Requests run in turn so nobody exceeds the AI usage limit.",
+      "shared": "Sharing the queue with someone else right now. Yours continues shortly."
+    },
+    "header": {
+      "title": "Mandalart Goal Planner",
+      "newPlan": "New Mandalart",
+      "confirmLeave": "A run is in progress. Leaving now cancels it, and today's usage is not refunded. Leave anyway?"
+    },
+    "steps": {
+      "label": "Mandalart steps",
+      "goal": "Goal",
+      "subgoals": "Areas",
+      "actions": "Actions",
+      "done": "Done",
+      "backTo": "Back to this step"
+    },
+    "csv": {
+      "areaNo": "area_no",
+      "area": "area",
+      "no": "no",
+      "action": "action",
+      "progress": "progress",
+      "ready": "ready_now",
+      "waitingOn": "waiting_on",
+      "yes": "yes",
+      "noValue": "no"
     }
   },
   "fi": {
@@ -150,18 +490,34 @@
       "save": "Tallenna",
       "confirmed": "Vahvistettu",
       "edit": "Muokkaa",
-      "generateActions": "Luo yksityiskohtaiset toimet"
+      "generateActions": "Luo yksityiskohtaiset toimet",
+      "confirm": "Vahvista"
     },
     "detailedActions": {
       "title": "Tarkista yksityiskohtaiset toimet",
       "mainGoal": "Päätavoite:",
       "progress": "toimea vahvistettu",
       "acceptAll": "Hyväksy kaikki toimet",
-      "generating": "Luodaan yksityiskohtaisia toimia jokaiselle alatavoitteelle..."
+      "generating": "Luodaan yksityiskohtaisia toimia jokaiselle alatavoitteelle...",
+      "failed": "aluetta epäonnistui",
+      "retry": "Yritä uudelleen",
+      "empty": "Tällä alueella ei ole toimenpiteitä. Luo uudelleen tai kirjoita enintään kahdeksan itse.",
+      "action": "Toimenpide",
+      "metric": "Mittari",
+      "save": "Tallenna",
+      "edit": "Muokkaa",
+      "complete": "Viimeistele Mandalart",
+      "addAction": "Lisää toimenpide",
+      "addManually": "Kirjoita itse",
+      "remove": "Poista",
+      "regenerateArea": "Luo tämä alue uudelleen",
+      "regenerating": "Luodaan...",
+      "regenerate": "Luo uudelleen",
+      "confirmRegenerate": "Tämä kirjoittaa alueen kaikki toimenpiteet uudelleen. Vahvistamasi ja muokkaamasi häviävät. Jatketaanko?",
+      "dismiss": "Sulje"
     },
     "visualization": {
       "title": "Mandalart-visualisointi",
-      "txtDownload": "Lataa TXT",
       "print": "Tulosta",
       "pdfDownload": "Lataa PDF",
       "pdfGenerating": "Luodaan PDF:ää...",
@@ -177,7 +533,7 @@
       "topSections": "Yläosat",
       "middleSections": "Keskiosat",
       "bottomSections": "Alaosat",
-      "restart": "Aloita alusta",
+      "restart": "Tee toinen Mandalart",
       "editContent": "Muokkaa sisältöä",
       "currentContent": "Nykyinen sisältö:",
       "enterMainGoal": "Syötä päätavoitteesi...",
@@ -191,7 +547,161 @@
         "subgoal": "Alatavoite",
         "action": "Toimi",
         "cell": "Solu"
+      },
+      "back": "Takaisin",
+      "exportsLocked": "Vienti (tili)",
+      "pdfFailed": "PDF:n luonti ei onnistunut. Yritä uudelleen.",
+      "pptxDownload": "PowerPoint",
+      "pptxGenerating": "Luodaan esitystä...",
+      "pptxFailed": "Esityksen luonti ei onnistunut. Yritä uudelleen.",
+      "pptxNoOrder": "Mikään ei riipu muusta — kaiken voi aloittaa heti.",
+      "pptxDeck": "Mandalart-toimintasuunnitelma",
+      "pptxOverview": "Koko Mandalart",
+      "pngDownload": "Kuva",
+      "pngGenerating": "Renderöidään...",
+      "mdDownload": "Markdown",
+      "csvDownload": "CSV",
+      "exportFailed": "Tiedoston luonti ei onnistunut. Yritä uudelleen."
+    },
+    "generating": {
+      "title": "Luodaan toimenpiteitä jokaiselle alueelle",
+      "progress": "aluetta valmiina"
+    },
+    "drafts": {
+      "title": "Keskeneräiset Mandalartit",
+      "delete": "Poista",
+      "note": "Tallennettu vain tähän selaimeen, poistetaan 24 tunnin kuluttua.",
+      "step": {
+        "review-subgoals": "Alueiden tarkistus",
+        "generating-actions": "Toimenpiteitä luodaan",
+        "review-actions": "Toimenpiteiden tarkistus",
+        "visualization": "Valmis"
       }
+    },
+    "plan": {
+      "notFound": "Mandalartia ei löydy",
+      "saveFailed": "Tallennus tilillesi ei onnistunut. Mandalart on yhä tässä selaimessa.",
+      "claimFailed": "Siirto tilillesi ei onnistunut. Mandalart on yhä tässä selaimessa.",
+      "draftExpired": "24 tunnin säilytysaika on umpeutunut."
+    },
+    "ai": {
+      "error": {
+        "timeout": "Tämä kesti liian kauan. Yritä uudelleen.",
+        "rateLimit": "Tekoälyn minuuttikiintiö on hetkellisesti täynnä. Yritä uudelleen noin minuutin kuluttua.",
+        "malformed": "Vastauksen lukeminen ei onnistunut. Yritä uudelleen.",
+        "generic": "Luonti epäonnistui. Yritä uudelleen."
+      }
+    },
+    "progress": {
+      "stage": {
+        "0": "Ei aloitettu",
+        "10": "Aloitettu",
+        "25": "Käynnissä",
+        "50": "Puolivälissä",
+        "75": "Lähes valmis",
+        "100": "Valmis"
+      }
+    },
+    "grid": {
+      "label": "Mandalart 9x9 -ruudukko",
+      "viewFull": "Koko ruudukko",
+      "viewOverview": "Vain keskus",
+      "backToOverview": "Takaisin keskukseen",
+      "tapArea": "Avaa alueen kahdeksan toimenpidettä napauttamalla",
+      "narrowHint": "Teksti on pientä tällä leveydellä"
+    },
+    "auth": {
+      "signIn": "Jatka Googlella",
+      "signOut": "Kirjaudu ulos",
+      "claiming": "Siirretään Mandalartia tilillesi...",
+      "claimFailed": "Siirto ei onnistunut",
+      "unconfigured": "Tilejä ei ole vielä otettu käyttöön",
+      "failed": "Kirjautuminen epäonnistui",
+      "required": "Kirjautuminen vaaditaan"
+    },
+    "quota": {
+      "anonExhausted": "Tämän päivän Mandalart on käytetty. Luo tili jatkaaksesi — ja säilyttääksesi juuri tekemäsi.",
+      "userExhausted": "Päivän raja on täynnä. Yritä huomenna uudelleen."
+    },
+    "order": {
+      "analyzing": "Selvitetään mikä tulee ensin",
+      "readyTitle": "{n} voit aloittaa heti",
+      "readyHint": "Näiden edessä ei ole mitään — ne voi aloittaa tänään.",
+      "showAllReady": "Näytä kaikki {n}",
+      "showFewer": "Näytä vähemmän",
+      "blockedTitle": "{n} odottaa jotain muuta",
+      "waitsFor": "Odottaa:",
+      "unlink": "Poista tämä edellytys"
+    },
+    "teaser": {
+      "close": "Sulje",
+      "back": "Takaisin",
+      "next": "Seuraava",
+      "later": "Ehkä myöhemmin",
+      "order": {
+        "title": "Mitä voit aloittaa tänään",
+        "body": "Kuusikymmentäneljä kerralla on syy siihen, ettei suunnitelmia aloiteta. Näiden edessä ei ole mitään."
+      },
+      "tracking": {
+        "title": "Edistyminen samassa kuvassa",
+        "body": "Ei erillistä näkymää — edistyminen näkyy juuri rakentamassasi ruudukossa, joten laiminlyöty alue erottuu heti.",
+        "sampleNotice": "Alla olevat luvut ovat esimerkki. Suunnitelmasi on ennallaan."
+      },
+      "progress": {
+        "title": "Kirjoita lause, saat prosentin",
+        "body": "Numeron valitsemisen sijaan kerro mitä tapahtui. Kokeile — tämä on yksi omista toimenpiteistäsi.",
+        "label": "Kuvaile edistymistäsi",
+        "example": "Taustatyö on tehty ja luonnoksesta on noin puolet kirjoitettu.",
+        "convert": "Muunna prosentiksi",
+        "converting": "Muunnetaan...",
+        "youDecide": "Malli vain ehdottaa. Sinä vahvistat aina mitä kirjataan."
+      },
+      "export": {
+        "title": "Esittele ja jaa",
+        "body": "Vie valmis Mandalart PDF:nä tai tulosteena ja jaa se linkillä.",
+        "locked": "Vaatii tilin"
+      },
+      "signin": {
+        "title": "Tilin kanssa",
+        "body": "Juuri tekemäsi Mandalart siirtyy mukanasi.",
+        "benefit": {
+          "keep": "Tämä Mandalart säilyy pysyvästi (nyt se katoaa 24 tunnissa)",
+          "order": "Palaa suoritusjärjestykseen milloin tahansa",
+          "track": "Kirjaa edistymistä ja saa tiedon pysähtyneistä alueista",
+          "export": "PDF, tulostus ja jakolinkit avautuvat"
+        },
+        "reassure": "Sinulta ei kysytä mitään muuta kuin mitä jo kirjoitit."
+      }
+    },
+    "queue": {
+      "ahead": "{n} edelläsi",
+      "turns": "Vuorotellen · {n} jäljellä",
+      "why": "Pyynnöt ajetaan vuorotellen, jottei käyttöraja ylity.",
+      "shared": "Jono on juuri nyt jaettu toisen kanssa. Omasi jatkuu pian."
+    },
+    "header": {
+      "title": "Mandalart-tavoitesuunnittelija",
+      "newPlan": "Uusi Mandalart",
+      "confirmLeave": "Luonti on kesken. Poistuminen peruu sen, eikä päivän käyttöä palauteta. Poistutaanko silti?"
+    },
+    "steps": {
+      "label": "Mandalartin vaiheet",
+      "goal": "Tavoite",
+      "subgoals": "Alueet",
+      "actions": "Toimenpiteet",
+      "done": "Valmis",
+      "backTo": "Takaisin tähän vaiheeseen"
+    },
+    "csv": {
+      "areaNo": "alue_nro",
+      "area": "alue",
+      "no": "nro",
+      "action": "toimenpide",
+      "progress": "edistyminen",
+      "ready": "valmis_nyt",
+      "waitingOn": "odottaa",
+      "yes": "kyllä",
+      "noValue": "ei"
     }
   }
 }

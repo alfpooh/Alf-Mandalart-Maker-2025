@@ -25,3 +25,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# keep the template, not the secrets
+!.env.example
+
+# package-lock.json is tracked: npm is this repo's package manager,
+# pinned in package.json's packageManager field.

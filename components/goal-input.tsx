@@ -9,13 +9,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { useLanguage } from "@/lib/language-context"
+import { QueueNotice } from "@/components/queue-notice"
 
 interface GoalInputProps {
   onGoalSubmit: (goal: string) => void
   isLoading: boolean
+  /** Message shown when generation failed. The old build silently substituted
+   *  placeholder subgoals here, so a failure looked like a result. */
+  error?: string | null
+  /** Present while a run is queued, so the wait can be explained. */
+  ticketId?: string | null
 }
 
-export function GoalInput({ onGoalSubmit, isLoading }: GoalInputProps) {
+export function GoalInput({
+  onGoalSubmit,
+  isLoading,
+  error = null,
+  ticketId = null,
+}: GoalInputProps) {
   const [goal, setGoal] = useState("")
   const { t } = useLanguage()
 
@@ -61,6 +72,15 @@ export function GoalInput({ onGoalSubmit, isLoading }: GoalInputProps) {
                   disabled={isLoading}
                 />
               </div>
+              {error && (
+                <p
+                  role="alert"
+                  className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+                >
+                  {error}
+                </p>
+              )}
+              {ticketId && <QueueNotice ticketId={ticketId} />}
               <Button type="submit" className="w-full text-lg py-6" disabled={!goal.trim() || isLoading}>
                 {isLoading ? t("goalInput.generating") : t("goalInput.generate")}
               </Button>

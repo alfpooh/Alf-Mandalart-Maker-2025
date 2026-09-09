@@ -1,27 +1,42 @@
 "use client"
 
 import type React from "react"
+import type { EditorDraft } from "@/lib/types"
+import { useLanguage } from "@/lib/language-context"
+import { MandalartGrid } from "@/components/mandalart-grid"
+import { ExecutionOrder } from "@/components/execution-order"
+import type { GridCell } from "@/lib/grid-layout"
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Download, Printer, FileText } from "lucide-react"
+import {
+  Download,
+  Printer,
+  FileText,
+  Lock,
+  Presentation,
+  Image as ImageIcon,
+  Table,
+} from "lucide-react"
+import { track } from "@/lib/analytics"
 import html2canvas from "html2canvas"
-import jsPDF from "jspdf"
-
-interface MandalartData {
-  mainGoal: { id: string; content: string; isConfirmed: boolean; isEditing: boolean }
-  subgoals: { id: string; content: string; isConfirmed: boolean; isEditing: boolean }[]
-  detailedActions: { [subgoalId: string]: { id: string; content: string; isConfirmed: boolean; isEditing: boolean }[] }
-}
+import { exportPlanPdf } from "@/lib/pdf"
+import { exportPlanPptx } from "@/lib/pptx"
+import { exportCsv, exportGridPng, exportMarkdown } from "@/lib/export-data"
 
 interface MandalartVisualizationProps {
-  data: MandalartData
+  draft: EditorDraft
+  onBack: () => void
   onRestart: () => void
   onUpdateMainGoal?: (content: string) => void
   onUpdateSubgoal?: (index: number, content: string) => void
   onUpdateAction?: (subgoalId: string, actionIndex: number, content: string) => void
+  onRemoveDependency?: (actionId: string, dependsOnId: string) => void
+  /** True for visitors without an account: exports are account-only. */
+  locked?: boolean
+  onShowTeaser?: () => void
 }
 
 interface CellData {
@@ -35,47 +50,50 @@ interface CellData {
 }
 
 export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({
-  data,
+  draft,
+  onBack,
   onRestart,
   onUpdateMainGoal,
   onUpdateSubgoal,
   onUpdateAction,
+  onRemoveDependency,
+  locked = false,
+  onShowTeaser,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCell, setEditingCell] = useState<CellData | null>(null)
   const [editContent, setEditContent] = useState("")
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+  const [isGeneratingPPTX, setIsGeneratingPPTX] = useState(false)
+  const [pdfError, setPdfError] = useState<string | null>(null)
+  const [busyExport, setBusyExport] = useState<"png" | "md" | "csv" | null>(null)
+  const [exportError, setExportError] = useState<string | null>(null)
   const printContentRef = useRef<HTMLDivElement>(null)
+  // Only the grid goes into the PDF as an image; the rest is written as text.
+  const gridRef = useRef<HTMLDivElement>(null)
+  const { t } = useLanguage()
 
-  // Color scheme for different sections
-  const colors = {
-    mainGoal: "bg-indigo-600 text-white",
-    subgoals: [
-      "bg-red-400 text-white", // Top-left subgoal
-      "bg-orange-400 text-white", // Top-center subgoal
-      "bg-yellow-400 text-gray-800", // Top-right subgoal
-      "bg-green-400 text-white", // Middle-left subgoal
-      "bg-blue-400 text-white", // Middle-right subgoal
-      "bg-purple-400 text-white", // Bottom-left subgoal
-      "bg-pink-400 text-white", // Bottom-center subgoal
-      "bg-teal-400 text-white", // Bottom-right subgoal
-    ],
-    actions: [
-      "bg-red-100 text-red-800", // Actions for subgoal 0
-      "bg-orange-100 text-orange-800", // Actions for subgoal 1
-      "bg-yellow-100 text-yellow-800", // Actions for subgoal 2
-      "bg-green-100 text-green-800", // Actions for subgoal 3
-      "bg-blue-100 text-blue-800", // Actions for subgoal 4
-      "bg-purple-100 text-purple-800", // Actions for subgoal 5
-      "bg-pink-100 text-pink-800", // Actions for subgoal 6
-      "bg-teal-100 text-teal-800", // Actions for subgoal 7
-    ],
+  // Phase 1 rebuilds this grid; until then the draft is shaped to what the
+  // existing render already expects rather than rewriting 600 lines twice.
+  const data = {
+    mainGoal: { id: "main", content: draft.mainGoal, isConfirmed: true, isEditing: false },
+    subgoals: draft.subgoals,
+    detailedActions: draft.actions,
   }
 
-  const handleCellClick = (cell: CellData) => {
-    if (cell.content.trim() === "") return // Don't open modal for empty cells
+  // Legend swatches only; the grid itself reads the --area-* tokens directly.
+  const colors = { mainGoal: "bg-[var(--area-center)] text-white" }
 
-    setEditingCell(cell)
+  const handleCellClick = (cell: GridCell) => {
+    if (cell.content.trim() === "" || cell.kind === "empty") return
+    setEditingCell({
+      content: cell.content,
+      colorClass: "",
+      type: cell.kind,
+      subgoalIndex: cell.subgoalIndex ?? undefined,
+      actionIndex: cell.actionIndex ?? undefined,
+      subgoalId: cell.subgoalId ?? undefined,
+    })
     setEditContent(cell.content)
     setIsModalOpen(true)
   }
@@ -111,314 +129,89 @@ export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({
     window.print()
   }
 
-  const generateTextContent = (): string => {
-    const currentDate = new Date().toLocaleDateString("ko-KR")
-    let textContent = `===============================================
-MANDALART GOAL PLANNER
-===============================================
-
-생성일: ${currentDate}
-
-===============================================
-🎯 메인 목표
-===============================================
-${data.mainGoal.content}
-
-===============================================
-📋 서브목표 및 액션 아이템
-===============================================
-
-`
-
-    data.subgoals.forEach((subgoal, index) => {
-      textContent += `${index + 1}. ${subgoal.content}\n`
-      textContent += `${"=".repeat(50)}\n`
-
-      const actions = data.detailedActions[subgoal.id] || []
-      if (actions.length > 0) {
-        textContent += `액션 아이템:\n`
-        actions.forEach((action, actionIndex) => {
-          textContent += `   ${actionIndex + 1}. ${action.content}\n`
-        })
-      } else {
-        textContent += `액션 아이템: 없음\n`
-      }
-      textContent += `\n`
-    })
-
-    textContent += `===============================================
-📊 MANDALART 구조 (9x9 그리드)
-===============================================
-
-중앙: ${data.mainGoal.content}
-
-서브목표 위치:
-1. 좌상단: ${data.subgoals[0]?.content || "없음"}
-2. 상단중앙: ${data.subgoals[1]?.content || "없음"}
-3. 우상단: ${data.subgoals[2]?.content || "없음"}
-4. 좌측중앙: ${data.subgoals[3]?.content || "없음"}
-5. 우측중앙: ${data.subgoals[4]?.content || "없음"}
-6. 좌하단: ${data.subgoals[5]?.content || "없음"}
-7. 하단중앙: ${data.subgoals[6]?.content || "없음"}
-8. 우하단: ${data.subgoals[7]?.content || "없음"}
-
-===============================================
-📝 개발 요약
-===============================================
-
-프로젝트명: Mandalart Goal Planner
-개발 기간: ${currentDate}
-기술 스택: Next.js, React, TypeScript, Tailwind CSS, Groq AI
-
-주요 기능:
-1. AI 기반 목표 분해 (메인 목표 → 8개 서브목표 → 각 8개 액션)
-2. 인터랙티브 목표 편집 및 확인 시스템
-3. 9x9 Mandalart 시각화 차트
-4. 클릭하여 편집 가능한 셀
-5. PDF 다운로드 및 인쇄 기능
-6. TXT 파일 다운로드 기능
-7. 한국어/영어 자동 언어 매칭
-
-개발 단계:
-1. 목표 입력 → AI 서브목표 생성
-2. 서브목표 검토 및 편집
-3. AI 액션 아이템 생성
-4. 액션 아이템 검토 및 편집
-5. 최종 Mandalart 시각화
-
-특징:
-- Groq AI 통합으로 빠른 목표 분해
-- 사용자 친화적 편집 인터페이스
-- 컬러 코딩으로 구분된 시각적 표현
-- 다양한 출력 형식 지원 (PDF, 인쇄, TXT)
-
-===============================================
-🎨 색상 구조
-===============================================
-
-메인 목표: 인디고 (중앙)
-서브목표 색상:
-1. 빨강 (좌상단)
-2. 주황 (상단중앙)
-3. 노랑 (우상단)
-4. 초록 (좌측중앙)
-5. 파랑 (우측중앙)
-6. 보라 (좌하단)
-7. 분홍 (하단중앙)
-8. 청록 (우하단)
-
-액션 아이템: 각 서브목표의 연한 색상
-
-===============================================
-📱 사용 방법
-===============================================
-
-1. 메인 목표 입력
-2. AI가 생성한 8개 서브목표 검토/편집
-3. AI가 생성한 각 서브목표별 8개 액션 아이템 검토/편집
-4. 최종 Mandalart 차트에서 셀 클릭하여 추가 편집 가능
-5. PDF, 인쇄, TXT 형식으로 결과물 다운로드
-
-===============================================
-END OF DOCUMENT
-===============================================`
-
-    return textContent
+  const docLabels = {
+    mainGoal: t("visualization.mainGoalLabel"),
+    metric: t("detailedActions.metric"),
+    readyTitle: t("order.readyTitle"),
+    waitingOn: t("order.waitsFor"),
   }
 
-  const downloadTXT = () => {
-    const textContent = generateTextContent()
-    const blob = new Blob([textContent], { type: "text/plain;charset=utf-8" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `Mandalart_${data.mainGoal.content.substring(0, 20).replace(/[^a-zA-Z0-9가-힣]/g, "_")}_${new Date().toISOString().split("T")[0]}.txt`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+  const csvHeaders = {
+    areaNo: t("csv.areaNo"),
+    area: t("csv.area"),
+    no: t("csv.no"),
+    action: t("csv.action"),
+    metric: t("detailedActions.metric"),
+    progress: t("csv.progress"),
+    ready: t("csv.ready"),
+    waitingOn: t("csv.waitingOn"),
+    yes: t("csv.yes"),
+    no_: t("csv.noValue"),
+  }
+
+  const runExport = async (kind: "png" | "md" | "csv") => {
+    setBusyExport(kind)
+    setExportError(null)
+    try {
+      if (kind === "png") {
+        await exportGridPng(gridRef.current, draft.mainGoal)
+      } else if (kind === "md") {
+        exportMarkdown(draft, docLabels)
+      } else {
+        exportCsv(draft, csvHeaders)
+      }
+    } catch (error) {
+      console.error(`[export:${kind}]`, error)
+      setExportError("visualization.exportFailed")
+    } finally {
+      setBusyExport(null)
+    }
   }
 
   const downloadPDF = async () => {
-    if (!printContentRef.current) return
-
     setIsGeneratingPDF(true)
-
+    setPdfError(null)
     try {
-      // Create a new jsPDF instance
-      const pdf = new jsPDF("p", "mm", "a4")
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      const pageHeight = pdf.internal.pageSize.getHeight()
-      const margin = 15
-
-      // Add title
-      pdf.setFontSize(18)
-      pdf.text("Mandalart Goal Planner", pageWidth / 2, margin + 10, { align: "center" })
-
-      // Add date
-      pdf.setFontSize(10)
-      const currentDate = new Date().toLocaleDateString("ko-KR")
-      pdf.text(`Generated: ${currentDate}`, pageWidth / 2, margin + 20, { align: "center" })
-
-      // Capture the chart as image
-      const canvas = await html2canvas(printContentRef.current, {
-        scale: 2,
-        backgroundColor: "#ffffff",
-        useCORS: true,
+      await exportPlanPdf(draft, gridRef.current, {
+        title: t("visualization.title"),
+        generated: t("visualization.generatedDate"),
+        mainGoal: t("visualization.mainGoalLabel"),
+        area: t("subgoalReview.subgoal"),
+        actions: t("visualization.actionsLabel"),
+        metric: t("detailedActions.metric"),
       })
-
-      const imgData = canvas.toDataURL("image/png")
-      const imgWidth = pageWidth - margin * 2
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
-
-      // Add chart image
-      let yPosition = margin + 30
-      if (yPosition + imgHeight > pageHeight - margin) {
-        pdf.addPage()
-        yPosition = margin
-      }
-
-      pdf.addImage(imgData, "PNG", margin, yPosition, imgWidth, imgHeight)
-
-      // Add new page for text content
-      pdf.addPage()
-      yPosition = margin
-
-      // Add main goal
-      pdf.setFontSize(14)
-      pdf.text("Main Goal:", margin, yPosition)
-      yPosition += 8
-      pdf.setFontSize(12)
-      const mainGoalLines = pdf.splitTextToSize(data.mainGoal.content, pageWidth - margin * 2)
-      pdf.text(mainGoalLines, margin, yPosition)
-      yPosition += mainGoalLines.length * 6 + 10
-
-      // Add subgoals and actions
-      data.subgoals.forEach((subgoal, index) => {
-        if (yPosition > pageHeight - 40) {
-          pdf.addPage()
-          yPosition = margin
-        }
-
-        pdf.setFontSize(12)
-        pdf.text(`${index + 1}. ${subgoal.content}`, margin, yPosition)
-        yPosition += 8
-
-        const actions = data.detailedActions[subgoal.id] || []
-        if (actions.length > 0) {
-          pdf.setFontSize(10)
-          actions.forEach((action, actionIndex) => {
-            if (yPosition > pageHeight - 20) {
-              pdf.addPage()
-              yPosition = margin
-            }
-            const actionLines = pdf.splitTextToSize(`  ${actionIndex + 1}. ${action.content}`, pageWidth - margin * 2)
-            pdf.text(actionLines, margin, yPosition)
-            yPosition += actionLines.length * 5
-          })
-        }
-        yPosition += 5
-      })
-
-      const now = new Date()
-      const day = String(now.getDate()).padStart(2, "0")
-      const month = String(now.getMonth() + 1).padStart(2, "0")
-      const year = now.getFullYear()
-      const fileName = `AlfsMandalart_${day}.${month}.${year}.pdf`
-      pdf.save(fileName)
     } catch (error) {
-      console.error("Error generating PDF:", error)
-      alert("PDF 생성 중 오류가 발생했습니다.")
+      // The old code alerted with a hardcoded Korean string regardless of
+      // language, and said nothing about what had failed.
+      console.error("[pdf]", error)
+      setPdfError("visualization.pdfFailed")
     } finally {
       setIsGeneratingPDF(false)
     }
   }
 
-  const createGrid = (): CellData[][] => {
-    const gridSize = 9
-    const grid: CellData[][] = Array(gridSize)
-      .fill(null)
-      .map(() =>
-        Array(gridSize).fill({
-          content: "",
-          colorClass: "bg-gray-50 text-gray-400 cursor-default",
-          type: "empty" as const,
-        }),
-      )
-
-    // Place central goal in the center
-    grid[4][4] = {
-      content: data.mainGoal.content,
-      colorClass: `${colors.mainGoal} cursor-pointer hover:opacity-80`,
-      type: "mainGoal",
-      id: data.mainGoal.id,
+  const downloadPPTX = async () => {
+    setIsGeneratingPPTX(true)
+    setPdfError(null)
+    try {
+      await exportPlanPptx(draft, gridRef.current, {
+        // Screen headings read oddly on a slide: the cover said "Mandalart
+        // visualization" and the grid slide said "Details".
+        deckTitle: t("visualization.pptxDeck"),
+        overview: t("visualization.pptxOverview"),
+        area: t("subgoalReview.subgoal"),
+        metric: t("detailedActions.metric"),
+        readyTitle: t("order.readyTitle"),
+        readyHint: t("order.readyHint"),
+        noDeps: t("visualization.pptxNoOrder"),
+      })
+    } catch (error) {
+      console.error("[pptx]", error)
+      setPdfError("visualization.pptxFailed")
+    } finally {
+      setIsGeneratingPPTX(false)
     }
-
-    // Place subgoals around the central goal
-    const subgoalPositions = [
-      [1, 1], // Top-left
-      [1, 4], // Top-center
-      [1, 7], // Top-right
-      [4, 1], // Middle-left
-      [4, 7], // Middle-right
-      [7, 1], // Bottom-left
-      [7, 4], // Bottom-center
-      [7, 7], // Bottom-right
-    ]
-
-    data.subgoals.forEach((subgoal, index) => {
-      const [row, col] = subgoalPositions[index]
-      grid[row][col] = {
-        content: subgoal.content,
-        colorClass: `${colors.subgoals[index] || "bg-gray-400 text-white"} cursor-pointer hover:opacity-80`,
-        type: "subgoal",
-        id: subgoal.id,
-        subgoalIndex: index,
-      }
-    })
-
-    // Place detailed actions in their respective 3x3 sections
-    data.subgoals.forEach((subgoal, subgoalIndex) => {
-      const actions = data.detailedActions[subgoal.id] || []
-
-      // Map subgoal index to correct 3x3 section position
-      const sectionMapping = [
-        [0, 0], // subgoal 0 -> top-left section
-        [0, 3], // subgoal 1 -> top-center section
-        [0, 6], // subgoal 2 -> top-right section
-        [3, 0], // subgoal 3 -> middle-left section
-        [3, 6], // subgoal 4 -> middle-right section
-        [6, 0], // subgoal 5 -> bottom-left section
-        [6, 3], // subgoal 6 -> bottom-center section
-        [6, 6], // subgoal 7 -> bottom-right section
-      ]
-
-      const [sectionRow, sectionCol] = sectionMapping[subgoalIndex] || [0, 0]
-
-      // Place actions around the subgoal in its 3x3 section
-      let actionIndex = 0
-      for (let r = 0; r < 3; r++) {
-        for (let c = 0; c < 3; c++) {
-          if (r === 1 && c === 1) continue // Skip center (that's where the subgoal is)
-          if (actionIndex < actions.length) {
-            grid[sectionRow + r][sectionCol + c] = {
-              content: actions[actionIndex].content,
-              colorClass: `${colors.actions[subgoalIndex] || "bg-gray-100 text-gray-600"} cursor-pointer hover:opacity-80`,
-              type: "action",
-              id: actions[actionIndex].id,
-              subgoalId: subgoal.id,
-              actionIndex: actionIndex,
-            }
-            actionIndex++
-          }
-        }
-      }
-    })
-
-    return grid
   }
-
-  const grid = createGrid()
 
   const getCellTypeLabel = (type: string) => {
     switch (type) {
@@ -464,23 +257,93 @@ END OF DOCUMENT
       `}</style>
 
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 flex flex-col items-center">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mb-6 no-print">
-            <h2 className="text-3xl font-bold">Mandalart Visualization</h2>
-            <div className="flex gap-2">
-              <Button onClick={downloadTXT} className="flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                TXT 다운로드
+        <div className="w-full max-w-7xl mx-auto">
+          <div className="flex flex-wrap justify-between items-center gap-3 mb-6 no-print">
+            <h2 className="text-2xl sm:text-3xl font-bold">{t("visualization.title")}</h2>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={onBack} variant="outline">
+                {t("visualization.back")}
               </Button>
-              <Button onClick={handlePrint} className="flex items-center gap-2">
-                <Printer className="w-4 h-4" />
-                인쇄하기
-              </Button>
-              <Button onClick={downloadPDF} disabled={isGeneratingPDF} className="flex items-center gap-2">
-                <Download className="w-4 h-4" />
-                {isGeneratingPDF ? "PDF 생성 중..." : "PDF 다운로드"}
-              </Button>
+
+              {locked ? (
+                // Downloads are an account feature. Rather than hiding them,
+                // show what exists and say what opens it — a hidden feature
+                // gives nobody a reason to sign in.
+                <Button
+                  onClick={() => {
+                    track("export_blocked")
+                    onShowTeaser?.()
+                  }}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <Lock className="w-4 h-4" />
+                  {t("visualization.exportsLocked")}
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    onClick={() => runExport("png")}
+                    disabled={busyExport !== null}
+                    className="flex items-center gap-2"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                    {busyExport === "png"
+                      ? t("visualization.pngGenerating")
+                      : t("visualization.pngDownload")}
+                  </Button>
+                  <Button
+                    onClick={() => runExport("md")}
+                    disabled={busyExport !== null}
+                    className="flex items-center gap-2"
+                  >
+                    <FileText className="w-4 h-4" />
+                    {t("visualization.mdDownload")}
+                  </Button>
+                  <Button
+                    onClick={() => runExport("csv")}
+                    disabled={busyExport !== null}
+                    className="flex items-center gap-2"
+                  >
+                    <Table className="w-4 h-4" />
+                    {t("visualization.csvDownload")}
+                  </Button>
+                  <Button onClick={handlePrint} className="flex items-center gap-2">
+                    <Printer className="w-4 h-4" />
+                    {t("visualization.print")}
+                  </Button>
+                  <Button
+                    onClick={downloadPPTX}
+                    disabled={isGeneratingPPTX}
+                    className="flex items-center gap-2"
+                  >
+                    <Presentation className="w-4 h-4" />
+                    {isGeneratingPPTX
+                      ? t("visualization.pptxGenerating")
+                      : t("visualization.pptxDownload")}
+                  </Button>
+                  <Button
+                    onClick={downloadPDF}
+                    disabled={isGeneratingPDF}
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    {isGeneratingPDF
+                      ? t("visualization.pdfGenerating")
+                      : t("visualization.pdfDownload")}
+                  </Button>
+                </>
+              )}
             </div>
+
+            {(pdfError || exportError) && (
+              <p
+                role="alert"
+                className="w-full rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-800"
+              >
+                {t(pdfError ?? exportError ?? "")}
+              </p>
+            )}
           </div>
 
           {/* Print Content */}
@@ -492,52 +355,59 @@ END OF DOCUMENT
             </div>
 
             {/* Legend */}
-            <div className="mb-6 p-4 bg-white rounded-lg shadow-sm">
-              <h3 className="text-lg font-semibold mb-3 text-center">Color Legend</h3>
+            <div className="mb-6 rounded-lg bg-white p-4 shadow-sm">
               <div className="flex flex-wrap justify-center gap-4 text-sm">
                 <div className="flex items-center gap-2">
-                  <div className={`w-4 h-4 rounded ${colors.mainGoal}`}></div>
-                  <span>Main Goal</span>
+                  <div className="h-4 w-4 rounded" style={{ background: "var(--area-center)" }} />
+                  <span>{t("visualization.mainGoal")}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded bg-red-400"></div>
-                  <span>Subgoals</span>
+                  <div className="flex" aria-hidden="true">
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                      <div
+                        key={n}
+                        className="h-4 w-2 first:rounded-l last:rounded-r"
+                        style={{ background: `var(--area-${n})` }}
+                      />
+                    ))}
+                  </div>
+                  <span>{t("visualization.subgoals")}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded bg-red-100 border border-red-200"></div>
-                  <span>Action Items</span>
+                  <div className="flex" aria-hidden="true">
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                      <div
+                        key={n}
+                        className="h-4 w-2 first:rounded-l last:rounded-r"
+                        style={{ background: `var(--area-${n}-soft)` }}
+                      />
+                    ))}
+                  </div>
+                  <span>{t("visualization.actionItems")}</span>
                 </div>
               </div>
-              <p className="text-center text-sm text-gray-600 mt-2 no-print">
-                Click on any cell to view details and edit
+              <p className="mt-2 text-center text-sm text-gray-600 no-print">
+                {t("visualization.clickToEdit")}
               </p>
             </div>
 
             {/* Mandalart Chart */}
-            <div className="mb-8 print-chart">
-              <div className="grid grid-cols-9 gap-1 border-2 border-gray-600 shadow-lg rounded-md overflow-hidden bg-white">
-                {grid.map((row, rowIndex) =>
-                  row.map((cell, colIndex) => (
-                    <div
-                      key={`${rowIndex}-${colIndex}`}
-                      className={`w-20 h-20 border border-gray-300 flex items-center justify-center font-medium break-words text-center transition-all hover:scale-105 ${cell.colorClass}`}
-                      style={{ fontSize: "0.5rem", lineHeight: "1.1" }}
-                      onClick={() => handleCellClick(cell)}
-                    >
-                      <span className="p-1">{cell.content}</span>
-                    </div>
-                  )),
-                )}
-              </div>
+            <div className="mb-8 print-chart" ref={gridRef}>
+              <MandalartGrid draft={draft} onCellClick={handleCellClick} />
+            </div>
+
+            {/* What can be started now */}
+            <div className="mb-8">
+              <ExecutionOrder draft={draft} onRemoveDependency={onRemoveDependency} />
             </div>
 
             {/* Detailed Content */}
             <div className="bg-white p-6 rounded-lg shadow-sm print-details">
-              <h2 className="text-xl font-bold text-center mb-6">📝 상세 내용</h2>
+              <h2 className="text-xl font-bold text-center mb-6">{t("visualization.detailedContent")}</h2>
 
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-lg font-bold text-indigo-600 mb-2">🎯 메인 목표</h3>
+                  <h3 className="text-lg font-bold text-indigo-600 mb-2">{t("visualization.mainGoalLabel")}</h3>
                   <div className="pl-4 border-l-4 border-indigo-200 bg-indigo-50 p-3 rounded">
                     <p className="text-gray-800">{data.mainGoal.content}</p>
                   </div>
@@ -553,7 +423,7 @@ END OF DOCUMENT
 
                     {data.detailedActions[subgoal.id] && data.detailedActions[subgoal.id].length > 0 && (
                       <div className="pl-4">
-                        <h4 className="text-sm font-semibold text-gray-600 mb-2">액션 아이템:</h4>
+                        <h4 className="text-sm font-semibold text-gray-600 mb-2">{t("visualization.actionsLabel")}</h4>
                         <div className="space-y-1">
                           {data.detailedActions[subgoal.id].map((action, actionIndex) => (
                             <div key={`action-${action.id}`} className="flex items-start text-sm text-gray-700">
@@ -572,56 +442,18 @@ END OF DOCUMENT
             </div>
           </div>
 
-          {/* Section Labels */}
-          <div className="mt-4 grid grid-cols-3 gap-8 text-center text-sm text-gray-600 no-print">
-            <div className="space-y-1">
-              <div className="font-semibold">Top Sections</div>
-              <div className="flex justify-center gap-2">
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-red-400"></div>
-                  <span>1</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-orange-400"></div>
-                  <span>2</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-yellow-400"></div>
-                  <span>3</span>
-                </div>
+          {/* Area key — eight colours, each tying a block to its subgoal. */}
+          <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4 no-print">
+            {draft.subgoals.map((subgoal, index) => (
+              <div key={subgoal.id} className="flex items-center gap-2 min-w-0">
+                <span
+                  aria-hidden="true"
+                  className="h-3 w-3 flex-none rounded-sm"
+                  style={{ background: `var(--area-${index + 1})` }}
+                />
+                <span className="truncate text-gray-700">{subgoal.content}</span>
               </div>
-            </div>
-            <div className="space-y-1">
-              <div className="font-semibold">Middle Sections</div>
-              <div className="flex justify-center gap-2">
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-green-400"></div>
-                  <span>4</span>
-                </div>
-                <div className={`w-3 h-3 rounded ${colors.mainGoal}`}></div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-blue-400"></div>
-                  <span>5</span>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <div className="font-semibold">Bottom Sections</div>
-              <div className="flex justify-center gap-2">
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-purple-400"></div>
-                  <span>6</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-pink-400"></div>
-                  <span>7</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-teal-400"></div>
-                  <span>8</span>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
 
           <div className="text-center mt-8 no-print">
@@ -629,7 +461,7 @@ END OF DOCUMENT
               onClick={onRestart}
               className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors"
             >
-              Restart
+              {t("visualization.restart")}
             </button>
           </div>
         </div>
@@ -640,13 +472,13 @@ END OF DOCUMENT
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Badge variant="outline">{getCellTypeLabel(editingCell?.type || "")}</Badge>
-                Edit Content
+                {t("visualization.editContent")}
               </DialogTitle>
             </DialogHeader>
 
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Current Content:</label>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">{t("visualization.currentContent")}</label>
                 {editingCell?.type === "mainGoal" ? (
                   <Textarea
                     value={editContent}
@@ -676,10 +508,10 @@ END OF DOCUMENT
 
             <DialogFooter>
               <Button variant="outline" onClick={handleCancel}>
-                Cancel
+                {t("visualization.cancel")}
               </Button>
               <Button onClick={handleSave} disabled={!editContent.trim()}>
-                Save Changes
+                {t("visualization.saveChanges")}
               </Button>
             </DialogFooter>
           </DialogContent>

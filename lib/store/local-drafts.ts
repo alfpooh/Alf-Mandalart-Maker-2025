@@ -1,0 +1,405 @@
+/**
+ * Drafts kept in the browser.
+ *
+ * Until Supabase is wired this is the only copy of a Mandalart, so it is
+ * written after every step rather than on completion — the old app lost all 64
+ * cells on a refresh, which is the failure this exists to remove.
+ *
+ * Everything here tolerates storage being unavailable. Private windows and
+ * blocked site data both throw on access, and a planner that crashes instead of
+ * degrading would be worse than one that simply cannot remember.
+ */
+
+import {
+  ACTIONS_PER_SUBGOAL,
+  SUBGOAL_COUNT,
+  type ActionDependency,
+  type EditorCell,
+  type EditorDraft,
+  type Language,
+} from "../types"
+import { breakCycles } from "../graph"
+
+const INDEX_KEY = "mandalart.drafts"
+const TOKEN_KEY = "mandalart.draftToken"
+const TEASER_KEY = "mandalart.teaserSeen"
+const DRAFT_PREFIX = "mandalart.draft."
+
+/** Drafts older than this are cleared, matching the 24h server-side draft TTL. */
+const MAX_AGE_MS = 24 * 60 * 60 * 1000
+
+function storage(): Storage | null {
+  if (typeof window === "undefined") return null
+  try {
+    // Touching the property is itself what throws when site data is blocked.
+    return window.localStorage
+  } catch {
+    return null
+  }
+}
+
+function newId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID()
+  return `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`
+}
+
+function cell(content: string, metric: string | null = null): EditorCell {
+  return { id: newId(), content, metric, isConfirmed: false, isEditing: false }
+}
+
+// ---------------------------------------------------------------------------
+// Reading and writing
+// ---------------------------------------------------------------------------
+
+function readIndex(store: Storage): string[] {
+  try {
+    const raw = store.getItem(INDEX_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : []
+  } catch {
+    return []
+  }
+}
+
+function writeIndex(store: Storage, ids: string[]): void {
+  try {
+    store.setItem(INDEX_KEY, JSON.stringify(ids))
+  } catch {
+    /* quota or blocked storage — the draft in memory still works */
+  }
+}
+
+export function loadDraft(id: string): EditorDraft | null {
+  const store = storage()
+  if (!store) return null
+  try {
+    const raw = store.getItem(DRAFT_PREFIX + id)
+    if (!raw) return null
+    const draft = JSON.parse(raw) as EditorDraft
+    // A shape from an older build is not worth crashing over.
+    if (!draft || typeof draft.mainGoal !== "string" || !Array.isArray(draft.subgoals)) {
+      return null
+    }
+    // Drafts written before dependencies existed have no such field.
+    return { ...draft, dependencies: draft.dependencies ?? [] }
+  } catch {
+    return null
+  }
+}
+
+export function saveDraft(draft: EditorDraft): EditorDraft {
+  const stamped: EditorDraft = { ...draft, updatedAt: new Date().toISOString() }
+  const store = storage()
+  if (!store) return stamped
+
+  try {
+    store.setItem(DRAFT_PREFIX + stamped.id, JSON.stringify(stamped))
+    const ids = readIndex(store).filter((id) => id !== stamped.id)
+    writeIndex(store, [stamped.id, ...ids])
+  } catch {
+    /* see above — never let a save failure take the screen down */
+  }
+  return stamped
+}
+
+export function deleteDraft(id: string): void {
+  const store = storage()
+  if (!store) return
+  try {
+    store.removeItem(DRAFT_PREFIX + id)
+    writeIndex(
+      store,
+      readIndex(store).filter((existing) => existing !== id),
+    )
+  } catch {
+    /* nothing useful to do */
+  }
+}
+
+/** Most recently updated first. Drops index entries whose draft is gone. */
+export function listDrafts(): EditorDraft[] {
+  const store = storage()
+  if (!store) return []
+
+  const drafts: EditorDraft[] = []
+  const live: string[] = []
+  for (const id of readIndex(store)) {
+    const draft = loadDraft(id)
+    if (draft) {
+      drafts.push(draft)
+      live.push(id)
+    }
+  }
+  writeIndex(store, live)
+  return drafts.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+}
+
+/** Clears drafts past the 24h window. Safe to call on every load. */
+export function purgeExpiredDrafts(): void {
+  const cutoff = Date.now() - MAX_AGE_MS
+  for (const draft of listDrafts()) {
+    if (Date.parse(draft.updatedAt) < cutoff) deleteDraft(draft.id)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Construction
+// ---------------------------------------------------------------------------
+
+export function createDraft(
+  mainGoal: string,
+  language: Language,
+  subgoals: string[],
+): EditorDraft {
+  const now = new Date().toISOString()
+  return {
+    id: newId(),
+    mainGoal,
+    language,
+    step: "review-subgoals",
+    subgoals: subgoals.slice(0, SUBGOAL_COUNT).map((content) => cell(content)),
+    actions: {},
+    dependencies: [],
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
+/** Attaches one subgoal's generated actions, replacing anything already there. */
+export function withActions(
+  draft: EditorDraft,
+  subgoalId: string,
+  actions: { content: string; metric: string | null }[],
+): EditorDraft {
+  return {
+    ...draft,
+    actions: {
+      ...draft.actions,
+      [subgoalId]: actions
+        .slice(0, ACTIONS_PER_SUBGOAL)
+        .map((a) => cell(a.content, a.metric)),
+    },
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cell edits
+// ---------------------------------------------------------------------------
+
+type CellPatch = Partial<Pick<EditorCell, "content" | "isConfirmed" | "isEditing">>
+
+export function patchSubgoal(
+  draft: EditorDraft,
+  index: number,
+  patch: CellPatch,
+): EditorDraft {
+  return {
+    ...draft,
+    subgoals: draft.subgoals.map((c, i) => (i === index ? { ...c, ...patch } : c)),
+  }
+}
+
+export function patchAction(
+  draft: EditorDraft,
+  subgoalId: string,
+  index: number,
+  patch: CellPatch,
+): EditorDraft {
+  const list = draft.actions[subgoalId]
+  if (!list) return draft
+  return {
+    ...draft,
+    actions: {
+      ...draft.actions,
+      [subgoalId]: list.map((c, i) => (i === index ? { ...c, ...patch } : c)),
+    },
+  }
+}
+
+/**
+ * Adds one empty action to an area, opened for editing.
+ *
+ * An area whose generation failed shows nothing and, once the page is
+ * reloaded, has no retry offered either — the failure list is component state.
+ * Writing the eight by hand has to be possible, or that area is simply lost.
+ *
+ * Capped at eight: the limited number of cells is the method, not a technical
+ * constraint, and letting it grow would quietly discard that.
+ */
+export function addAction(draft: EditorDraft, subgoalId: string): EditorDraft {
+  const list = draft.actions[subgoalId] ?? []
+  if (list.length >= ACTIONS_PER_SUBGOAL) return draft
+  return {
+    ...draft,
+    actions: {
+      ...draft.actions,
+      [subgoalId]: [...list, { ...cell(""), isEditing: true }],
+    },
+  }
+}
+
+/** Removes one action, and any dependency edge that pointed at it. */
+export function removeAction(
+  draft: EditorDraft,
+  subgoalId: string,
+  index: number,
+): EditorDraft {
+  const list = draft.actions[subgoalId]
+  if (!list || !list[index]) return draft
+  const removedId = list[index].id
+
+  return {
+    ...draft,
+    actions: { ...draft.actions, [subgoalId]: list.filter((_, i) => i !== index) },
+    // A prerequisite pointing at a deleted action would block its dependents
+    // for ever, since nothing can complete it.
+    dependencies: draft.dependencies.filter(
+      (edge) => edge.actionId !== removedId && edge.dependsOnId !== removedId,
+    ),
+  }
+}
+
+export function confirmAllSubgoals(draft: EditorDraft): EditorDraft {
+  return {
+    ...draft,
+    subgoals: draft.subgoals.map((c) => ({ ...c, isConfirmed: true, isEditing: false })),
+  }
+}
+
+export function confirmAllActions(draft: EditorDraft, subgoalId: string): EditorDraft {
+  const list = draft.actions[subgoalId]
+  if (!list) return draft
+  return {
+    ...draft,
+    actions: {
+      ...draft.actions,
+      [subgoalId]: list.map((c) => ({ ...c, isConfirmed: true, isEditing: false })),
+    },
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Draft token
+// ---------------------------------------------------------------------------
+
+/**
+ * The bearer token for the anonymous plan row on the server.
+ *
+ * Held separately from the drafts themselves because it outlives the tab: the
+ * sign-in redirect leaves the site entirely and comes back to /auth/claim,
+ * which reads this to move the plan onto the new account.
+ */
+export function saveDraftToken(planId: string, token: string): void {
+  const store = storage()
+  if (!store) return
+  try {
+    store.setItem(TOKEN_KEY, JSON.stringify({ planId, token }))
+  } catch {
+    /* the plan still exists locally; only the claim is lost */
+  }
+}
+
+export function readDraftToken(): string | null {
+  const store = storage()
+  if (!store) return null
+  try {
+    const raw = store.getItem(TOKEN_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { token?: unknown }
+    return typeof parsed?.token === "string" ? parsed.token : null
+  } catch {
+    return null
+  }
+}
+
+export function clearDraftToken(): void {
+  const store = storage()
+  if (!store) return
+  try {
+    store.removeItem(TOKEN_KEY)
+  } catch {
+    /* nothing useful to do */
+  }
+}
+
+/** Creates a draft under an id the server chose, so both sides agree. */
+export function createDraftWithId(
+  id: string,
+  mainGoal: string,
+  language: Language,
+  subgoals: string[],
+): EditorDraft {
+  return { ...createDraft(mainGoal, language, subgoals), id }
+}
+
+// ---------------------------------------------------------------------------
+// Dependencies
+// ---------------------------------------------------------------------------
+
+/**
+ * Replaces the dependency set, guaranteeing it stays acyclic.
+ *
+ * Every write goes through `breakCycles` rather than trusting the caller — a
+ * cycle reaching storage would make the ordering view unable to name anything
+ * as startable, which is the one thing it exists to do.
+ */
+export function withDependencies(
+  draft: EditorDraft,
+  dependencies: ActionDependency[],
+): EditorDraft {
+  return { ...draft, dependencies: breakCycles(dependencies).edges }
+}
+
+/** Drops one prerequisite, when a person judges the ordering wrong. */
+export function removeDependency(
+  draft: EditorDraft,
+  actionId: string,
+  dependsOnId: string,
+): EditorDraft {
+  return {
+    ...draft,
+    dependencies: draft.dependencies.filter(
+      (edge) => !(edge.actionId === actionId && edge.dependsOnId === dependsOnId),
+    ),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Teaser
+// ---------------------------------------------------------------------------
+
+/**
+ * Which plans have already shown the sign-up walkthrough.
+ *
+ * Kept per plan rather than globally: someone who dismissed it once should not
+ * see it again for that Mandalart, but a second plan is a fresh moment worth
+ * asking at. Failing to read this shows the teaser again, which is the
+ * harmless direction to fail in.
+ */
+export function wasTeaserSeen(planId: string): boolean {
+  const store = storage()
+  if (!store) return false
+  try {
+    const raw = store.getItem(TEASER_KEY)
+    const seen = raw ? (JSON.parse(raw) as unknown) : []
+    return Array.isArray(seen) && seen.includes(planId)
+  } catch {
+    return false
+  }
+}
+
+export function markTeaserSeen(planId: string): void {
+  const store = storage()
+  if (!store) return
+  try {
+    const raw = store.getItem(TEASER_KEY)
+    const seen = raw ? (JSON.parse(raw) as unknown) : []
+    const list = Array.isArray(seen) ? seen.filter((id) => typeof id === "string") : []
+    if (!list.includes(planId)) {
+      // Keep the tail bounded; old ids stop mattering once the draft expires.
+      store.setItem(TEASER_KEY, JSON.stringify([planId, ...list].slice(0, 50)))
+    }
+  } catch {
+    /* nothing useful to do */
+  }
+}

@@ -8,6 +8,19 @@
   }
 }
 
+
+/* ---------------------------------------------------------------------------
+ * Mandalart area colours.
+ *
+ * The eight hues are information, not decoration — they are what ties an outer
+ * block to its subgoal in the centre block. Every pair below clears WCAG AA
+ * (4.5:1) in both themes; the values the grid used before did not, with seven
+ * of nine combinations failing and green-400 on white text at 1.74:1.
+ *
+ * `--area-N` carries white text (subgoal cells), `--area-N-soft` carries
+ * `--area-N-ink` (action cells).
+ * ------------------------------------------------------------------------- */
+
 @layer base {
   :root {
     --font-sans: var(--font-geist-sans);
@@ -37,6 +50,34 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+
+    /* Centre of the grid: the anchor everything else hangs off. */
+    --area-center: #1F2430;
+    --area-center-fg: #FFFFFF;
+    --area-1: #B23A48;
+    --area-1-soft: #F7EBED;
+    --area-1-ink: #622028;
+    --area-2: #A15C1E;
+    --area-2-soft: #F6EFE8;
+    --area-2-ink: #593310;
+    --area-3: #5F6E15;
+    --area-3-soft: #EFF0E8;
+    --area-3-ink: #343D0C;
+    --area-4: #2E7D5B;
+    --area-4-soft: #EAF2EF;
+    --area-4-ink: #194532;
+    --area-5: #1D7080;
+    --area-5-soft: #E8F1F2;
+    --area-5-ink: #103E46;
+    --area-6: #2A5F9E;
+    --area-6-soft: #EAEFF5;
+    --area-6-ink: #173457;
+    --area-7: #5B4B9E;
+    --area-7-soft: #EFEDF5;
+    --area-7-ink: #322957;
+    --area-8: #93397A;
+    --area-8-soft: #F4EBF2;
+    --area-8-ink: #511F43;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -79,6 +120,33 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --area-center: #E7EAEF;
+    --area-center-fg: #14171C;
+    --area-1: #BB525E;
+    --area-1-soft: #482832;
+    --area-1-ink: #E8C4C8;
+    --area-2: #A66429;
+    --area-2-soft: #433225;
+    --area-2-ink: #E3CEBC;
+    --area-3: #6D7B2A;
+    --area-3-soft: #2F3722;
+    --area-3-ink: #CFD4B9;
+    --area-4: #368262;
+    --area-4-soft: #213C37;
+    --area-4-ink: #C0D8CE;
+    --area-5: #347E8D;
+    --area-5-soft: #1C3842;
+    --area-5-ink: #BBD4D9;
+    --area-6: #4A77AD;
+    --area-6-soft: #20334B;
+    --area-6-ink: #BFCFE2;
+    --area-7: #796BAF;
+    --area-7-soft: #2E2D4B;
+    --area-7-ink: #CEC9E2;
+    --area-8: #A55B91;
+    --area-8-soft: #3F2841;
+    --area-8-ink: #DFC4D7;
   }
 }
 
