@@ -41,7 +41,10 @@
       "addManually": "직접 입력하기",
       "remove": "삭제",
       "regenerateArea": "이 영역 다시 생성",
-      "regenerating": "생성 중..."
+      "regenerating": "생성 중...",
+      "regenerate": "다시 생성",
+      "confirmRegenerate": "이 영역의 액션을 새로 만듭니다. 지금까지 확인하거나 수정한 내용은 사라집니다. 계속할까요?",
+      "dismiss": "닫기"
     },
     "visualization": {
       "title": "만다라트 시각화",
@@ -114,7 +117,7 @@
     "ai": {
       "error": {
         "timeout": "응답이 너무 오래 걸립니다. 다시 시도해 주세요.",
-        "rateLimit": "요청이 몰리고 있습니다. 잠시 후 다시 시도해 주세요.",
+        "rateLimit": "AI 사용량이 잠시 한도에 도달했습니다. 1분쯤 뒤에 다시 시도해 주세요.",
         "malformed": "AI 응답을 읽지 못했습니다. 다시 시도해 주세요.",
         "generic": "생성에 실패했습니다. 다시 시도해 주세요."
       }
@@ -273,7 +276,10 @@
       "addManually": "Write them myself",
       "remove": "Delete",
       "regenerateArea": "Regenerate this area",
-      "regenerating": "Generating..."
+      "regenerating": "Generating...",
+      "regenerate": "Regenerate",
+      "confirmRegenerate": "This rewrites every action in this area. What you have confirmed or edited here will be lost. Continue?",
+      "dismiss": "Dismiss"
     },
     "visualization": {
       "title": "Mandalart Visualization",
@@ -346,7 +352,7 @@
     "ai": {
       "error": {
         "timeout": "That took too long. Please try again.",
-        "rateLimit": "Too many requests right now. Please try again shortly.",
+        "rateLimit": "The AI is briefly over its per-minute allowance. Try again in about a minute.",
         "malformed": "Couldn't read the AI response. Please try again.",
         "generic": "Generation failed. Please try again."
       }
@@ -505,7 +511,10 @@
       "addManually": "Kirjoita itse",
       "remove": "Poista",
       "regenerateArea": "Luo tämä alue uudelleen",
-      "regenerating": "Luodaan..."
+      "regenerating": "Luodaan...",
+      "regenerate": "Luo uudelleen",
+      "confirmRegenerate": "Tämä kirjoittaa alueen kaikki toimenpiteet uudelleen. Vahvistamasi ja muokkaamasi häviävät. Jatketaanko?",
+      "dismiss": "Sulje"
     },
     "visualization": {
       "title": "Mandalart-visualisointi",
@@ -578,7 +587,7 @@
     "ai": {
       "error": {
         "timeout": "Tämä kesti liian kauan. Yritä uudelleen.",
-        "rateLimit": "Pyyntöjä on juuri nyt liikaa. Yritä hetken kuluttua.",
+        "rateLimit": "Tekoälyn minuuttikiintiö on hetkellisesti täynnä. Yritä uudelleen noin minuutin kuluttua.",
         "malformed": "Vastauksen lukeminen ei onnistunut. Yritä uudelleen.",
         "generic": "Luonti epäonnistui. Yritä uudelleen."
       }

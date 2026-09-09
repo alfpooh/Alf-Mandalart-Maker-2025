@@ -48,6 +48,7 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
   const [failures, setFailures] = useState<number[]>([])
   const [analyzed, setAnalyzed] = useState<Set<string>>(new Set())
   const [regeneratingArea, setRegeneratingArea] = useState<number | null>(null)
+  const [areaError, setAreaError] = useState<string | null>(null)
   const [showTeaser, setShowTeaser] = useState(false)
   const [ticket, setTicket] = useState<string | null>(null)
 
@@ -164,6 +165,7 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
       if (!subgoal) return
 
       setRegeneratingArea(subgoalIndex)
+      setAreaError(null)
       setBusy(true)
       try {
         const siblings = draft.subgoals
@@ -181,6 +183,10 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
             latest ? saveDraft(withActions(latest, subgoal.id, result.data)) : latest,
           )
           setFailures((current) => current.filter((i) => i !== subgoalIndex))
+        } else {
+          // Silence here read as a dead button: it spun, then nothing changed
+          // and nothing said why. The existing actions are left untouched.
+          setAreaError(result.error)
         }
       } finally {
         setRegeneratingArea(null)
@@ -313,6 +319,8 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
           onRemoveAction={(id, i) => update((d) => removeAction(d, id, i))}
           onRegenerateArea={handleRegenerateArea}
           regeneratingArea={regeneratingArea}
+          areaError={areaError ? t(areaError) : null}
+          onDismissAreaError={() => setAreaError(null)}
         />
       )
     }

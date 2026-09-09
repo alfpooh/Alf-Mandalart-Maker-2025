@@ -29,6 +29,9 @@ interface DetailedActionsReviewProps {
    *  — the failure banner does not, being component state. */
   onRegenerateArea: (subgoalIndex: number) => void
   regeneratingArea: number | null
+  /** Why the last regeneration failed, already translated. */
+  areaError: string | null
+  onDismissAreaError: () => void
 }
 
 export function DetailedActionsReview({
@@ -47,6 +50,8 @@ export function DetailedActionsReview({
   onRemoveAction,
   onRegenerateArea,
   regeneratingArea,
+  areaError,
+  onDismissAreaError,
 }: DetailedActionsReviewProps) {
   const { t } = useLanguage()
 
@@ -87,6 +92,20 @@ export function DetailedActionsReview({
           </Card>
         )}
 
+        {areaError && (
+          <Card className="mb-6 border-red-300 bg-red-50">
+            <CardContent className="flex flex-wrap items-center gap-3 p-4">
+              <AlertTriangle className="h-5 w-5 flex-none text-red-600" aria-hidden="true" />
+              <p role="alert" className="flex-1 text-sm text-red-900">
+                {areaError}
+              </p>
+              <Button size="sm" variant="outline" onClick={onDismissAreaError}>
+                {t("detailedActions.dismiss")}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="space-y-6">
           {subgoals.map((subgoal, subgoalIndex) => {
             const actions = detailedActions[subgoal.id] ?? []
@@ -99,7 +118,7 @@ export function DetailedActionsReview({
                     <CardTitle className="text-lg">
                       {subgoalIndex + 1}. {subgoal.content}
                     </CardTitle>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="outline" className="tabular-nums">
                         {subgoalConfirmed}/{actions.length}
                       </Badge>
@@ -110,6 +129,35 @@ export function DetailedActionsReview({
                           onClick={() => onAcceptAllActions(subgoal.id)}
                         >
                           {t("detailedActions.acceptAll")}
+                        </Button>
+                      )}
+                      {actions.length > 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={regeneratingArea !== null}
+                          onClick={() => {
+                            // Regenerating replaces every action here. Ask only
+                            // when there is work to lose — accepting or editing
+                            // an area is the signal that someone read it.
+                            const reviewed = actions.some((a) => a.isConfirmed)
+                            if (reviewed && !window.confirm(t("detailedActions.confirmRegenerate"))) {
+                              return
+                            }
+                            onRegenerateArea(subgoalIndex)
+                          }}
+                        >
+                          <RotateCw
+                            className={`mr-1 h-4 w-4 ${
+                              regeneratingArea === subgoalIndex
+                                ? "animate-spin motion-reduce:animate-none"
+                                : ""
+                            }`}
+                            aria-hidden="true"
+                          />
+                          {regeneratingArea === subgoalIndex
+                            ? t("detailedActions.regenerating")
+                            : t("detailedActions.regenerate")}
                         </Button>
                       )}
                     </div>
