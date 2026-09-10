@@ -3,6 +3,7 @@
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
+import { baseUrlFrom } from "./base-url"
 import { getServerClient } from "./supabase/server"
 
 /**
@@ -16,9 +17,9 @@ export async function signInWithGoogle(): Promise<void> {
   const supabase = await getServerClient()
   if (!supabase) redirect("/?auth=unconfigured")
 
-  const headerList = await headers()
-  const origin = headerList.get("origin") ?? headerList.get("x-forwarded-host")
-  const base = origin?.startsWith("http") ? origin : `https://${origin}`
+  const base = baseUrlFrom(await headers())
+  // Better to refuse than to send someone to a host we invented.
+  if (!base) redirect("/?auth=failed")
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
