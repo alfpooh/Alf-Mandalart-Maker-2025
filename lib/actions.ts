@@ -16,6 +16,7 @@ import {
   refinePrompt,
   reviewPrompt,
   subgoalsPrompt,
+  translatePrompt,
 } from "./ai/prompts"
 import {
   actionsSchema,
@@ -24,6 +25,7 @@ import {
   refineSchema,
   reviewSchema,
   subgoalsSchema,
+  translationSchema,
 } from "./ai/schemas"
 import { breakCycles } from "./graph"
 import { snapToStage, type ActionDependency, type Language, type ProgressValue } from "./types"
@@ -371,3 +373,41 @@ export async function reviewPlan(
   )
 }
 
+
+// ---------------------------------------------------------------------------
+// Translation
+// ---------------------------------------------------------------------------
+
+/**
+ * Translates a plan's text into another language.
+ *
+ * Takes and returns a flat list so the caller can map it back by position —
+ * ids, order, confirmed state and the dependency graph never leave the browser,
+ * and a response of the wrong length is rejected here rather than corrupting a
+ * plan. Nothing is written anywhere: the caller decides whether to keep it.
+ */
+export async function translatePlanText(
+  items: string[],
+  target: Language,
+  ticketId: string,
+): Promise<AiResult<string[]>> {
+  if (items.length === 0) return { ok: true, data: [] }
+
+  const result = await run(
+    "translate",
+    translationSchema,
+    translatePrompt(items, target),
+    ticketId,
+  )
+  if (!result.ok) return result
+
+  const translated = result.data.translations
+  if (translated.length !== items.length) {
+    // Silently padding or truncating would slide an area's text into an action.
+    console.error(
+      `[ai:translate] expected ${items.length} lines, got ${translated.length}`,
+    )
+    return { ok: false, error: "ai.error.malformed" }
+  }
+  return { ok: true, data: translated }
+}

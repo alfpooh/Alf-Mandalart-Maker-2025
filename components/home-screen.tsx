@@ -17,7 +17,7 @@ import {
   saveDraftToken,
 } from "@/lib/store/local-drafts"
 import type { EditorDraft } from "@/lib/types"
-import { settle } from "@/lib/settle"
+import { settled } from "@/lib/settle"
 
 /** `session` is still accepted so the page can pass it; the header renders it. */
 export function HomeScreen({ session: _session }: { session: SessionInfo }) {
@@ -41,7 +41,7 @@ export function HomeScreen({ session: _session }: { session: SessionInfo }) {
     // The quota is claimed before any model call, so a refused request costs
     // nothing. A plan is ~17 calls; letting generation start and rejecting
     // afterwards would pay for work nobody receives.
-    const created = settle(await createPlan(goal, language))
+    const created = await settled(createPlan(goal, language))
     if (!created.ok) {
       setError(created.error)
       setIsLoading(false)
@@ -51,7 +51,7 @@ export function HomeScreen({ session: _session }: { session: SessionInfo }) {
     // One ticket for this run, so the queue can report where it stands.
     const ticket = newTicket()
     setTicket(ticket)
-    const result = settle(await generateSubgoals(goal, language, ticket))
+    const result = await settled(generateSubgoals(goal, language, ticket))
     if (!result.ok) {
       setError(result.error)
       setIsLoading(false)

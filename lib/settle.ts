@@ -17,3 +17,23 @@ export type Failed = { ok: false; error: string }
 export function settle<T extends { ok: boolean }>(result: T | undefined): T | Failed {
   return result ?? { ok: false, error: "app.stale" }
 }
+
+/**
+ * The same guard, for a call that rejects rather than returning nothing.
+ *
+ * `settle` covers a server action whose response never arrived; this covers one
+ * whose fetch threw — a dropped connection, a suspended tab, a server restart.
+ * Both had to be covered, because these calls are made inside `Promise.all`:
+ * one rejection there abandons the whole batch, and a plan left mid-generation
+ * has no way forward and no way back.
+ */
+export async function settled<T extends { ok: boolean }>(
+  call: Promise<T | undefined>,
+): Promise<T | Failed> {
+  try {
+    return settle(await call)
+  } catch (error) {
+    console.error("[action] call failed", error)
+    return { ok: false, error: "app.offline" }
+  }
+}

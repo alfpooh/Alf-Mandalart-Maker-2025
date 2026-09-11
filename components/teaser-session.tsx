@@ -10,7 +10,7 @@ import { track } from "@/lib/analytics"
 import { readProgressFromText } from "@/lib/actions"
 import { newTicket } from "@/lib/ticket"
 import { useLanguage } from "@/lib/language-context"
-import { settle } from "@/lib/settle"
+import { settled } from "@/lib/settle"
 import {
   draftActions,
   PROGRESS_STAGES,
@@ -208,8 +208,8 @@ function ProgressStep({ draft }: { draft: EditorDraft }) {
   const run = async () => {
     setBusy(true)
     setError(null)
-    const outcome = settle(
-      await readProgressFromText(
+    const outcome = await settled(
+      readProgressFromText(
         note,
         { content: action.content, metric: action.metric, current: 0 },
         draft.language,

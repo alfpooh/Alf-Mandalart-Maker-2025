@@ -18,12 +18,12 @@ const NAMES: Record<Language, { native: string; short: string }> = {
  * there. Language names rather than flags: a flag names a country.
  */
 export function LanguageSelector() {
-  const { language, setLanguage } = useLanguage()
+  const { language, setLanguage, t } = useLanguage()
 
   return (
     <div
       role="radiogroup"
-      aria-label="Language"
+      aria-label={t("language.label")}
       className="inline-flex overflow-hidden rounded-md border border-border"
     >
           {LANGUAGES.map((code) => {

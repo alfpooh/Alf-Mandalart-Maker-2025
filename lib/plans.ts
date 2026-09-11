@@ -5,6 +5,7 @@ import { headers } from "next/headers"
 
 import { clientIp, fingerprint, today, verdict, type QuotaVerdict } from "./quota"
 import { getAdminClient, getCurrentUser, getServerClient } from "./supabase/server"
+import { isBlank, normalizeCell, normalizeContent } from "./validation"
 import {
   ANON_DAILY_LIMIT,
   DRAFT_TTL_HOURS,
@@ -217,6 +218,13 @@ export async function savePlanContent(
     if (!data) return { ok: false, error: "plan.notFound" }
   }
 
+  // The same check the Save button uses. A client that skips it — an old tab,
+  // a crafted request — must not be able to store a blank goal that still
+  // counts towards 8/8.
+  if (draft.subgoals.some((subgoal) => isBlank(subgoal.content))) {
+    return { ok: false, error: "plan.blankSubgoal" }
+  }
+
   await supabase.from("subgoals").delete().eq("plan_id", planId)
 
   const { data: inserted, error: subgoalError } = await supabase
@@ -225,7 +233,7 @@ export async function savePlanContent(
       draft.subgoals.map((subgoal, position) => ({
         plan_id: planId,
         position,
-        content: subgoal.content,
+        content: normalizeContent(subgoal.content),
       })),
     )
     .select("id, position")
@@ -236,13 +244,18 @@ export async function savePlanContent(
   const actions = draft.subgoals.flatMap((subgoal, position) => {
     const rowId = byPosition.get(position)
     if (!rowId) return []
-    return (draft.actions[subgoal.id] ?? []).map((action, index) => ({
-      plan_id: planId,
-      subgoal_id: rowId,
-      position: index,
-      content: action.content,
-      metric: action.metric,
-    }))
+    return (draft.actions[subgoal.id] ?? [])
+      .filter((action) => !isBlank(action.content))
+      .map((action, index) => {
+        const clean = normalizeCell(action)
+        return {
+          plan_id: planId,
+          subgoal_id: rowId,
+          position: index,
+          content: clean.content,
+          metric: clean.metric,
+        }
+      })
   })
 
   if (actions.length > 0) {

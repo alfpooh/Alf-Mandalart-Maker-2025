@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useLanguage } from "@/lib/language-context"
+import { isBlank } from "@/lib/validation"
 import { SUBGOAL_COUNT, type EditorCell } from "@/lib/types"
 
 interface SubgoalReviewProps {
@@ -57,7 +58,9 @@ export function SubgoalReview({
         </Card>
 
         <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-          {subgoals.map((subgoal, index) => (
+          {subgoals.map((subgoal, index) => {
+            const blank = isBlank(subgoal.content)
+            return (
             <Card
               key={subgoal.id}
               className={`transition-all ${
@@ -70,23 +73,38 @@ export function SubgoalReview({
                 </div>
 
                 {subgoal.isEditing ? (
-                  <Input
-                    value={subgoal.content}
-                    onChange={(e) => onSubgoalUpdate(index, e.target.value)}
-                    className="mb-3"
-                    autoFocus
-                    aria-label={`${t("subgoalReview.subgoal")} ${index + 1}`}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") onSaveEdit(index)
-                    }}
-                  />
+                  <>
+                    <Input
+                      value={subgoal.content}
+                      onChange={(e) => onSubgoalUpdate(index, e.target.value)}
+                      className={blank ? "mb-1 border-red-400" : "mb-3"}
+                      autoFocus
+                      aria-label={`${t("subgoalReview.subgoal")} ${index + 1}`}
+                      aria-invalid={blank}
+                      aria-describedby={blank ? `${subgoal.id}-blank` : undefined}
+                      onKeyDown={(e) => {
+                        // Enter must not save an empty box either.
+                        if (e.key === "Enter" && !blank) onSaveEdit(index)
+                      }}
+                    />
+                    {blank && (
+                      <p id={`${subgoal.id}-blank`} role="alert" className="mb-3 text-sm text-red-700">
+                        {t("subgoalReview.blank")}
+                      </p>
+                    )}
+                  </>
                 ) : (
                   <p className="mb-3 text-gray-800">{subgoal.content}</p>
                 )}
 
                 <div className="flex gap-2">
                   {subgoal.isEditing ? (
-                    <Button size="sm" onClick={() => onSaveEdit(index)} className="flex-1">
+                    <Button
+                      size="sm"
+                      onClick={() => onSaveEdit(index)}
+                      className="flex-1"
+                      disabled={blank}
+                    >
                       <Save className="mr-1 h-4 w-4" aria-hidden="true" />
                       {t("subgoalReview.save")}
                     </Button>
@@ -125,7 +143,8 @@ export function SubgoalReview({
                 </div>
               </CardContent>
             </Card>
-          ))}
+            )
+          })}
         </div>
 
         {allConfirmed && (

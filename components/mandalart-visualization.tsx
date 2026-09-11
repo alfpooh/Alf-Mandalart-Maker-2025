@@ -223,13 +223,13 @@ export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({
   const getCellTypeLabel = (type: string) => {
     switch (type) {
       case "mainGoal":
-        return "Main Goal"
+        return t("visualization.mainGoal")
       case "subgoal":
-        return "Subgoal"
+        return t("subgoalReview.subgoal")
       case "action":
-        return "Action Item"
+        return t("visualization.actionItems")
       default:
-        return "Cell"
+        return t("visualization.cell")
     }
   }
 
@@ -357,7 +357,7 @@ export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({
           <div ref={printContentRef} className="print-content">
             {/* Print Header */}
             <div className="text-center mb-6 print:mb-4">
-              <h1 className="text-2xl font-bold text-gray-800 mb-2">Mandalart Goal Planner</h1>
+              <h1 className="text-2xl font-bold text-gray-800 mb-2">{t("app.title")}</h1>
               <p className="text-gray-600 text-sm">
                 {t("visualization.generatedDate")} {generatedOn}
               </p>
@@ -492,14 +492,14 @@ export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({
                   <Textarea
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
-                    placeholder="Enter your main goal..."
+                    placeholder={t("visualization.enterMainGoal")}
                     className="min-h-[100px]"
                   />
                 ) : (
                   <Textarea
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
-                    placeholder="Enter content..."
+                    placeholder={t("visualization.enterContent")}
                     className="min-h-[80px]"
                   />
                 )}
@@ -507,10 +507,10 @@ export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({
 
               {editingCell?.type === "action" && (
                 <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                  <strong>Related Subgoal:</strong>{" "}
+                  <strong>{t("visualization.relatedSubgoal")}</strong>{" "}
                   {editingCell.subgoalId
-                    ? data.subgoals.find((sg) => sg.id === editingCell.subgoalId)?.content || "Unknown"
-                    : "Unknown"}
+                    ? data.subgoals.find((sg) => sg.id === editingCell.subgoalId)?.content || t("visualization.unknown")
+                    : t("visualization.unknown")}
                 </div>
               )}
             </div>

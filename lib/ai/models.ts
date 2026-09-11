@@ -28,6 +28,7 @@ export type AiTask =
   | "dependencies"
   | "progress"
   | "review"
+  | "translate"
 
 export const AI_TASKS: AiTask[] = [
   "subgoals",
@@ -36,6 +37,7 @@ export const AI_TASKS: AiTask[] = [
   "dependencies",
   "progress",
   "review",
+  "translate",
 ]
 
 type ProviderId = "google" | "groq"
@@ -77,6 +79,9 @@ const TASK_DEFAULTS: Record<ProviderId, Record<AiTask, string>> = {
     dependencies: "gemini-pro-latest",
     progress: "gemini-flash-latest",
     review: "gemini-pro-latest",
+    // Translation is faithful rewriting, not judgement — flash does it well
+    // and a plan is ~137 strings in one call.
+    translate: "gemini-flash-latest",
   },
   // Kept working so the provider can be switched back with one env var.
   // Of what Groq still serves, only the gpt-oss family accepts
@@ -89,6 +94,7 @@ const TASK_DEFAULTS: Record<ProviderId, Record<AiTask, string>> = {
     dependencies: "openai/gpt-oss-120b",
     progress: "openai/gpt-oss-20b",
     review: "openai/gpt-oss-120b",
+    translate: "openai/gpt-oss-20b",
   },
 }
 
@@ -131,6 +137,8 @@ export const TASK_TIMEOUT_MS: Record<AiTask, number> = {
   dependencies: 90_000,
   progress: 30_000,
   review: 90_000,
+  // A whole plan in one request, so it gets the longest window.
+  translate: 120_000,
 }
 
 /**
@@ -155,6 +163,7 @@ const TASK_REASONING: Record<AiTask, "low" | "medium" | "high"> = {
   dependencies: "medium",
   progress: "low",
   review: "medium",
+  translate: "low",
 }
 
 /**

@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, Check, Edit2, Plus, RotateCw, Save, Trash2 } from "lucide-react"
+import { AlertTriangle, Check, Edit2, Plus, RotateCw, Save, Trash2, Undo2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -24,7 +24,13 @@ interface DetailedActionsReviewProps {
   onRetrySubgoal: () => void
   /** Adds one empty action to an area, for filling a gap by hand. */
   onAddAction: (subgoalId: string) => void
+  /** The measure is a field of its own, editable alongside the text. */
+  onMetricUpdate: (subgoalId: string, actionIndex: number, metric: string) => void
   onRemoveAction: (subgoalId: string, actionIndex: number) => void
+  /** The last deletion, while it can still be taken back. */
+  undoable: { content: string; area: number } | null
+  onUndoRemove: () => void
+  onDismissUndo: () => void
   /** Regenerates one area. Works from the area itself, so it survives a reload
    *  — the failure banner does not, being component state. */
   onRegenerateArea: (subgoalIndex: number) => void
@@ -47,7 +53,11 @@ export function DetailedActionsReview({
   onComplete,
   onRetrySubgoal,
   onAddAction,
+  onMetricUpdate,
   onRemoveAction,
+  undoable,
+  onUndoRemove,
+  onDismissUndo,
   onRegenerateArea,
   regeneratingArea,
   areaError,
@@ -100,6 +110,23 @@ export function DetailedActionsReview({
                 {areaError}
               </p>
               <Button size="sm" variant="outline" onClick={onDismissAreaError}>
+                {t("detailedActions.dismiss")}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {undoable && (
+          <Card className="mb-6 border-slate-300 bg-slate-50">
+            <CardContent className="flex flex-wrap items-center gap-3 p-4">
+              <p role="status" className="flex-1 text-sm text-slate-800">
+                {t("detailedActions.removed", { content: undoable.content })}
+              </p>
+              <Button size="sm" onClick={onUndoRemove}>
+                <Undo2 className="mr-1 h-4 w-4" aria-hidden="true" />
+                {t("detailedActions.undo")}
+              </Button>
+              <Button size="sm" variant="outline" onClick={onDismissUndo}>
                 {t("detailedActions.dismiss")}
               </Button>
             </CardContent>
@@ -208,18 +235,44 @@ export function DetailedActionsReview({
                           }`}
                         >
                           {action.isEditing ? (
-                            <Input
-                              value={action.content}
-                              onChange={(e) =>
-                                onActionUpdate(subgoal.id, actionIndex, e.target.value)
-                              }
-                              className="mb-2"
-                              autoFocus
-                              aria-label={`${t("detailedActions.action")} ${actionIndex + 1}`}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") onSaveEdit(subgoal.id, actionIndex)
-                              }}
-                            />
+                            <>
+                              <Input
+                                value={action.content}
+                                onChange={(e) =>
+                                  onActionUpdate(subgoal.id, actionIndex, e.target.value)
+                                }
+                                className="mb-2"
+                                autoFocus
+                                aria-label={`${t("detailedActions.action")} ${actionIndex + 1}`}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && action.content.trim()) {
+                                    onSaveEdit(subgoal.id, actionIndex)
+                                  }
+                                }}
+                              />
+                              {/* Editable rather than display-only: a hand-added
+                                  action had no way to get a measure at all. */}
+                              <label
+                                className="mb-1 block text-xs text-gray-500"
+                                htmlFor={`${action.id}-metric`}
+                              >
+                                {t("detailedActions.metricLabel")}
+                              </label>
+                              <Input
+                                id={`${action.id}-metric`}
+                                value={action.metric ?? ""}
+                                onChange={(e) =>
+                                  onMetricUpdate(subgoal.id, actionIndex, e.target.value)
+                                }
+                                className="mb-2"
+                                placeholder={t("detailedActions.metricPlaceholder")}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && action.content.trim()) {
+                                    onSaveEdit(subgoal.id, actionIndex)
+                                  }
+                                }}
+                              />
+                            </>
                           ) : (
                             <>
                               <p className="mb-1 text-sm text-gray-800">{action.content}</p>
@@ -260,14 +313,28 @@ export function DetailedActionsReview({
                                   variant="outline"
                                   className="flex-1"
                                   onClick={() => onStartEdit(subgoal.id, actionIndex)}
+                                  aria-label={t("detailedActions.editAction", {
+                                    n: actionIndex + 1,
+                                  })}
                                 >
                                   <Edit2 className="mr-1 h-4 w-4" aria-hidden="true" />
                                   {t("detailedActions.edit")}
                                 </Button>
-                                {!action.isConfirmed && (
+                                {action.isConfirmed ? (
+                                  // Confirmed used to be signalled by the green
+                                  // card alone, which is colour-only and says
+                                  // nothing to a screen reader.
+                                  <Badge variant="default" className="shrink-0">
+                                    <Check className="mr-1 h-4 w-4" aria-hidden="true" />
+                                    {t("detailedActions.confirmed")}
+                                  </Badge>
+                                ) : (
                                   <Button
                                     size="sm"
                                     onClick={() => onActionConfirm(subgoal.id, actionIndex)}
+                                    aria-label={t("detailedActions.confirmAction", {
+                                      n: actionIndex + 1,
+                                    })}
                                   >
                                     <Check className="h-4 w-4" aria-hidden="true" />
                                   </Button>

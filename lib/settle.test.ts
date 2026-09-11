@@ -7,7 +7,7 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 
-import { settle } from "./settle.ts"
+import { settle, settled } from "./settle.ts"
 
 /** The shape these actions actually return. */
 type Result = { ok: true; data: string } | { ok: false; error: string }
@@ -41,5 +41,29 @@ describe("settle", () => {
   it("does not mistake a falsy-but-present failure for a missing one", () => {
     const failed = { ok: false as const, error: "" }
     assert.equal(settle(failed), failed)
+  })
+})
+
+describe("settled", () => {
+  it("passes a result through", async () => {
+    const ok = { ok: true as const, data: 1 }
+    assert.equal(await settled(Promise.resolve(ok)), ok)
+  })
+
+  it("turns a missing result into a failure", async () => {
+    const result = await settled<Result>(Promise.resolve(undefined))
+    assert.equal(result.ok, false)
+    if (!result.ok) assert.equal(result.error, "app.stale")
+  })
+
+  it("turns a rejection into a failure instead of abandoning the batch", async () => {
+    // A rejection inside Promise.all used to strand a plan mid-generation.
+    const result = await settled<Result>(Promise.reject(new TypeError("Failed to fetch")))
+    assert.equal(result.ok, false)
+    if (!result.ok) assert.equal(result.error, "app.offline")
+  })
+
+  it("never rejects, whatever it is given", async () => {
+    await assert.doesNotReject(() => settled<Result>(Promise.reject("plain string")))
   })
 })

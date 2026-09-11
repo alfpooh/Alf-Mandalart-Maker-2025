@@ -12,7 +12,7 @@
  * never shown.
  */
 
-import { SUBGOAL_COUNT, type EditorCell, type EditorDraft } from "./types"
+import { SUBGOAL_COUNT, type EditorCell, type EditorDraft } from "./types.ts"
 
 /** The centre of a 3×3 block, in reading order. */
 export const CENTRE = 4
@@ -151,6 +151,29 @@ export function buildBlocks(draft: EditorDraft): GridBlock[] {
   }
 
   return blocks
+}
+
+/** The grid is nine rows of nine, whatever the blocks look like in the markup. */
+export const GRID_SIZE = 9
+
+/**
+ * The same cells in reading order: nine rows of nine, left to right.
+ *
+ * The markup nests three-by-three blocks, which is what makes the Mandalart
+ * structure visible, but it means the DOM has no rows — a screen reader was
+ * offered nine anonymous groups of nine buttons and no way to know that cell
+ * was row 4, column 7. This is the row-major view that the accessible grid
+ * renders from.
+ */
+export function gridRows(blocks: GridBlock[]): GridCell[][] {
+  const byPosition = new Map(blocks.map((block) => [block.position, block]))
+  return Array.from({ length: GRID_SIZE }, (_, row) =>
+    Array.from({ length: GRID_SIZE }, (_, column) => {
+      const block = byPosition.get(Math.floor(row / 3) * 3 + Math.floor(column / 3))
+      const within = (row % 3) * 3 + (column % 3)
+      return block?.cells[within] ?? emptyCell()
+    }),
+  )
 }
 
 /** The centre block on its own, for the mobile overview. */

@@ -156,3 +156,22 @@ export const reviewSchema = z.object({
 })
 
 export type ReviewResult = z.infer<typeof reviewSchema>
+
+// ---------------------------------------------------------------------------
+// Translation
+// ---------------------------------------------------------------------------
+
+/**
+ * A plan's text, translated, as a flat list in the order it was sent.
+ *
+ * Positions rather than a mirrored object: ids, order and confirmed state stay
+ * in the browser, so the worst a bad response can do is fail a length check.
+ */
+export const translationSchema = z.object({
+  translations: z
+    .array(z.string().max(400))
+    .max(200)
+    .describe("One translation per input line, in the same order, same count"),
+})
+
+export type TranslationResult = z.infer<typeof translationSchema>

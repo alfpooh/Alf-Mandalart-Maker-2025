@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ChevronLeft, Grid3x3, Maximize2 } from "lucide-react"
 
 import { useLanguage } from "@/lib/language-context"
@@ -8,7 +8,8 @@ import {
   blockForSubgoal,
   buildBlocks,
   centreBlock,
-  CENTRE,
+  GRID_SIZE,
+  gridRows,
   type GridBlock,
   type GridCell,
 } from "@/lib/grid-layout"
@@ -26,19 +27,22 @@ interface MandalartGridProps {
 /**
  * The 9×9 grid.
  *
- * Built as nine 3×3 blocks rather than one 81-cell grid, so block boundaries
- * come from the markup instead of being painted onto a uniform lattice — the
- * old version drew 81 identical squares and the Mandalart structure vanished.
+ * Laid out as nine rows of nine, which is both what it is and what a screen
+ * reader needs. It used to be built as nine nested 3×3 blocks: visually right,
+ * but the accessibility tree then held nine anonymous groups of nine buttons
+ * with no rows and no cells, so nothing could say "row 4, column 7" or move by
+ * arrow key. The block structure is now drawn — a wider gutter on the third and
+ * sixth boundary — rather than nested, so the Mandalart still reads as nine
+ * blocks while the markup stays a real grid.
  *
- * Sizing is driven by the container, not fixed pixels. The old cells were a
- * hard 80px with 8px text, which put the grid at 720px wide (overflowing every
- * phone) while being too small to read on any screen. Below the full grid's
+ * Sizing is driven by the container, not fixed pixels. Below the full grid's
  * comfortable width the view falls back to a drill-down: the centre block
  * first, then one area at a time, each of which is legible at any size.
  */
 export function MandalartGrid({ draft, progress, onCellClick }: MandalartGridProps) {
   const { t } = useLanguage()
   const blocks = useMemo(() => buildBlocks(draft), [draft])
+  const rows = useMemo(() => gridRows(blocks), [blocks])
 
   const containerRef = useRef<HTMLDivElement>(null)
   const [wide, setWide] = useState(true)
@@ -109,51 +113,40 @@ export function MandalartGrid({ draft, progress, onCellClick }: MandalartGridPro
       </div>
 
       {view.kind === "full" && (
-        <div
-          className="mx-auto grid aspect-square w-full max-w-3xl grid-cols-3 gap-[3px] rounded-md border-2 border-foreground bg-foreground p-[3px]"
-          role="table"
-          aria-label={t("grid.label")}
-        >
-          {blocks.map((block) => (
-            <Block
-              key={block.position}
-              block={block}
-              progress={progress}
-              draft={draft}
-              onCellClick={onCellClick}
-              onExpand={
-                block.subgoalIndex === null
-                  ? undefined
-                  : () => choose({ kind: "area", subgoalIndex: block.subgoalIndex! })
-              }
-            />
-          ))}
-        </div>
+        <Grid
+          rows={rows}
+          draft={draft}
+          progress={progress}
+          onCellClick={onCellClick}
+          label={t("grid.label")}
+          compact
+        />
       )}
 
       {view.kind === "overview" && centre && (
         <div className="mx-auto w-full max-w-lg">
-          <SingleBlock
-            block={centre}
+          <Grid
+            rows={blockRows(centre)}
             draft={draft}
             progress={progress}
-            onCellClick={onCellClick}
-            onCellExpand={(cell) =>
-              cell.subgoalIndex !== null && choose({ kind: "area", subgoalIndex: cell.subgoalIndex })
+            label={centre.title}
+            onCellClick={(cell) =>
+              cell.kind === "subgoal" && cell.subgoalIndex !== null
+                ? choose({ kind: "area", subgoalIndex: cell.subgoalIndex })
+                : onCellClick?.(cell)
             }
           />
-          <p className="mt-3 text-center text-sm text-muted-foreground">
-            {t("grid.tapArea")}
-          </p>
+          <p className="mt-3 text-center text-sm text-muted-foreground">{t("grid.tapArea")}</p>
         </div>
       )}
 
       {view.kind === "area" && area && (
         <div className="mx-auto w-full max-w-lg">
-          <SingleBlock
-            block={area}
+          <Grid
+            rows={blockRows(area)}
             draft={draft}
             progress={progress}
+            label={area.title}
             onCellClick={onCellClick}
           />
         </div>
@@ -162,73 +155,163 @@ export function MandalartGrid({ draft, progress, onCellClick }: MandalartGridPro
   )
 }
 
+/** One block as three rows of three, so the small views are grids too. */
+function blockRows(block: GridBlock): GridCell[][] {
+  return [0, 1, 2].map((row) => block.cells.slice(row * 3, row * 3 + 3))
+}
+
 // ---------------------------------------------------------------------------
 
-/** One 3×3 block inside the full grid. Text scales with the block's own width. */
-function Block({
-  block,
+/**
+ * An accessible grid: `grid` > `row` > `gridcell`, with arrow-key movement.
+ *
+ * Exactly one cell is in the tab order at a time — the standard roving
+ * tabindex — so Tab reaches the grid once rather than stepping through
+ * eighty-one buttons before whatever follows it.
+ */
+function Grid({
+  rows,
   draft,
   progress,
   onCellClick,
-  onExpand,
+  label,
+  compact = false,
 }: {
-  block: GridBlock
+  rows: GridCell[][]
   draft: EditorDraft
   progress?: Record<string, ProgressValue>
   onCellClick?: (cell: GridCell) => void
-  onExpand?: () => void
+  label: string
+  compact?: boolean
 }) {
+  const { t } = useLanguage()
+  const size = rows.length
+  const width = rows[0]?.length ?? 0
+
+  const [active, setActive] = useState<[number, number]>(() => firstFocusable(rows) ?? [0, 0])
+  const gridRef = useRef<HTMLDivElement>(null)
+
+  // A plan that loses or gains cells must not leave focus pointing at nothing.
+  useEffect(() => {
+    setActive((current) => {
+      const [row, col] = current
+      if (rows[row]?.[col] && rows[row][col].kind !== "empty") return current
+      return firstFocusable(rows) ?? [0, 0]
+    })
+  }, [rows])
+
+  const move = useCallback(
+    (from: [number, number], dRow: number, dCol: number): [number, number] => {
+      let [row, col] = from
+      // Step past empty cells rather than stopping on one, so arrow keys stay
+      // useful while a plan is still being filled in.
+      for (let step = 0; step < GRID_SIZE * GRID_SIZE; step++) {
+        row += dRow
+        col += dCol
+        if (row < 0 || col < 0 || row >= size || col >= width) return from
+        if (rows[row]?.[col]?.kind !== "empty") return [row, col]
+      }
+      return from
+    },
+    [rows, size, width],
+  )
+
+  const focusCell = useCallback((row: number, col: number) => {
+    setActive([row, col])
+    gridRef.current
+      ?.querySelector<HTMLElement>(`[data-cell="${row}-${col}"] button`)
+      ?.focus()
+  }, [])
+
+  const onKeyDown = (event: React.KeyboardEvent, row: number, col: number) => {
+    const deltas: Record<string, [number, number]> = {
+      ArrowUp: [-1, 0],
+      ArrowDown: [1, 0],
+      ArrowLeft: [0, -1],
+      ArrowRight: [0, 1],
+    }
+    const delta = deltas[event.key]
+    if (delta) {
+      const [nextRow, nextCol] = move([row, col], delta[0], delta[1])
+      event.preventDefault()
+      focusCell(nextRow, nextCol)
+      return
+    }
+    if (event.key === "Home" || event.key === "End") {
+      const target = event.key === "Home" ? 0 : width - 1
+      const step = event.key === "Home" ? 1 : -1
+      for (let c = target; c >= 0 && c < width; c += step) {
+        if (rows[row]?.[c]?.kind !== "empty") {
+          event.preventDefault()
+          focusCell(row, c)
+          return
+        }
+      }
+    }
+  }
+
   return (
-    <div
-      className="grid aspect-square grid-cols-3 gap-px bg-border [container-type:inline-size]"
-      onDoubleClick={onExpand}
-      role="rowgroup"
-    >
-      {block.cells.map((cell, index) => (
-        <Cell
-          key={index}
-          cell={cell}
-          draft={draft}
-          progress={progress}
-          onClick={onCellClick}
-          compact
-        />
-      ))}
-    </div>
+    <>
+      <div
+        ref={gridRef}
+        role="grid"
+        aria-label={label}
+        aria-rowcount={size}
+        aria-colcount={width}
+        className="mx-auto flex aspect-square w-full max-w-3xl flex-col gap-px rounded-md border-2 border-foreground bg-foreground p-[3px] [container-type:inline-size]"
+      >
+        {rows.map((cells, row) => (
+          <div
+            key={row}
+            role="row"
+            aria-rowindex={row + 1}
+            className="grid flex-1 gap-px"
+            style={{
+              gridTemplateColumns: `repeat(${width}, minmax(0, 1fr))`,
+              // The block boundary, drawn instead of nested. Without it a flat
+              // grid is eighty-one identical squares and the Mandalart's
+              // structure disappears.
+              marginBottom: row % 3 === 2 && row !== size - 1 ? 2 : undefined,
+            }}
+          >
+            {cells.map((cell, col) => (
+              <div
+                key={col}
+                role="gridcell"
+                aria-colindex={col + 1}
+                data-cell={`${row}-${col}`}
+                className="relative min-w-0"
+                style={{ marginRight: col % 3 === 2 && col !== width - 1 ? 2 : undefined }}
+              >
+                <Cell
+                  cell={cell}
+                  draft={draft}
+                  progress={progress}
+                  onClick={onCellClick}
+                  compact={compact}
+                  position={t("grid.cellPosition", { row: row + 1, col: col + 1 })}
+                  tabbable={active[0] === row && active[1] === col}
+                  onKeyDown={(event) => onKeyDown(event, row, col)}
+                  onFocus={() => setActive([row, col])}
+                />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      <p className="sr-only">{t("grid.keyboardHint")}</p>
+    </>
   )
 }
 
-/** A block on its own, at readable size — the overview and drill-down views. */
-function SingleBlock({
-  block,
-  draft,
-  progress,
-  onCellClick,
-  onCellExpand,
-}: {
-  block: GridBlock
-  draft: EditorDraft
-  progress?: Record<string, ProgressValue>
-  onCellClick?: (cell: GridCell) => void
-  onCellExpand?: (cell: GridCell) => void
-}) {
-  return (
-    <div className="grid aspect-square grid-cols-3 gap-px rounded-md border-2 border-foreground bg-border [container-type:inline-size]">
-      {block.cells.map((cell, index) => (
-        <Cell
-          key={index}
-          cell={cell}
-          draft={draft}
-          progress={progress}
-          onClick={
-            onCellExpand && cell.kind === "subgoal" && index !== CENTRE
-              ? () => onCellExpand(cell)
-              : onCellClick
-          }
-        />
-      ))}
-    </div>
-  )
+/** The first cell that can hold focus, so the tab stop is never an empty one. */
+function firstFocusable(rows: GridCell[][]): [number, number] | null {
+  for (let row = 0; row < rows.length; row++) {
+    for (let col = 0; col < (rows[row]?.length ?? 0); col++) {
+      if (rows[row][col].kind !== "empty") return [row, col]
+    }
+  }
+  return null
 }
 
 // ---------------------------------------------------------------------------
@@ -253,17 +336,34 @@ function Cell({
   progress,
   onClick,
   compact = false,
+  position,
+  tabbable,
+  onKeyDown,
+  onFocus,
 }: {
   cell: GridCell
   draft: EditorDraft
   progress?: Record<string, ProgressValue>
-  onClick?: ((cell: GridCell) => void) | (() => void)
+  onClick?: (cell: GridCell) => void
   compact?: boolean
+  /** "row 4, column 7", already translated. */
+  position: string
+  tabbable: boolean
+  onKeyDown: (event: React.KeyboardEvent) => void
+  onFocus: () => void
 }) {
   const { t } = useLanguage()
 
   if (cell.kind === "empty") {
-    return <div className="bg-muted" aria-hidden="true" />
+    // Still a cell as far as the grid is concerned — a hole in the row would
+    // make the column indices lie.
+    return (
+      <div className="h-full w-full bg-muted">
+        <span className="sr-only">
+          {position}: {t("grid.emptyCell")}
+        </span>
+      </div>
+    )
   }
 
   const actionId =
@@ -272,7 +372,7 @@ function Cell({
       : undefined
   const pct = actionId ? progress?.[actionId] : undefined
 
-  const label =
+  const kind =
     cell.kind === "mainGoal"
       ? t("visualization.mainGoal")
       : cell.kind === "subgoal"
@@ -282,11 +382,18 @@ function Cell({
   return (
     <button
       type="button"
-      onClick={() => onClick?.(cell as never)}
+      onClick={() => onClick?.(cell)}
+      onKeyDown={onKeyDown}
+      onFocus={onFocus}
+      tabIndex={tabbable ? 0 : -1}
       style={cellStyle(cell)}
       title={cell.metric ? `${cell.content}\n${cell.metric}` : cell.content}
-      aria-label={`${label}: ${cell.content}${pct === undefined ? "" : ` — ${pct}%`}`}
-      className={`relative flex items-center justify-center overflow-hidden p-1 text-center transition-transform focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring ${
+      // Position first: without it a reader hears eighty-one labels and has no
+      // idea where any of them sit.
+      aria-label={`${position}, ${kind}: ${cell.content}${
+        cell.metric ? `. ${cell.metric}` : ""
+      }${pct === undefined ? "" : ` — ${pct}%`}`}
+      className={`relative flex h-full w-full items-center justify-center overflow-hidden p-1 text-center transition-transform focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring ${
         onClick ? "cursor-pointer hover:brightness-95" : "cursor-default"
       } ${cell.isBlockCentre ? "font-semibold" : ""}`}
     >
@@ -302,9 +409,10 @@ function Cell({
       <span
         className="relative line-clamp-4 break-words leading-tight"
         style={{
-          // Scales with the block, never below what a person can actually read.
+          // The container is now the whole grid rather than one block, so the
+          // per-cell share of it is a third of what it was.
           fontSize: compact
-            ? "max(9.5px, min(4.2cqw, 13px))"
+            ? "max(9.5px, min(1.4cqw, 13px))"
             : "max(12px, min(4.6cqw, 17px))",
         }}
       >

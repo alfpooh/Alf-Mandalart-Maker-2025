@@ -9,7 +9,11 @@ import { GeneratingActions } from "@/components/generating-actions"
 import { MandalartVisualization } from "@/components/mandalart-visualization"
 import { StepProgress } from "@/components/step-progress"
 import { SubgoalReview } from "@/components/subgoal-review"
-import { analyzeDependencies, generateActionsForSubgoal } from "@/lib/actions"
+import {
+  analyzeDependencies,
+  generateActionsForSubgoal,
+  translatePlanText,
+} from "@/lib/actions"
 import { useLanguage } from "@/lib/language-context"
 import {
   addAction,
@@ -18,19 +22,26 @@ import {
   loadDraft,
   patchAction,
   patchSubgoal,
+  removalOf,
   removeAction,
   removeDependency,
+  restoreAction,
   saveDraft,
   withActions,
   withDependencies,
 } from "@/lib/store/local-drafts"
+import type { RemovedAction } from "@/lib/store/local-drafts"
 import type { AppStep, EditorDraft } from "@/lib/types"
 import type { SessionInfo } from "@/lib/plans"
 import { newTicket } from "@/lib/ticket"
 import { isBusy, setBusy, subscribeBusy } from "@/lib/busy"
 import { TeaserSession } from "@/components/teaser-session"
 import { markTeaserSeen, wasTeaserSeen } from "@/lib/store/local-drafts"
-import { settle } from "@/lib/settle"
+import { settled } from "@/lib/settle"
+import { LanguageChangePrompt } from "@/components/language-change-prompt"
+import { applyTranslations, draftToStrings } from "@/lib/translate-draft"
+import type { Language } from "@/lib/types"
+import { normalizeCell, normalizeContent } from "@/lib/validation"
 
 /**
  * One Mandalart, at whichever step it is on.
@@ -42,7 +53,7 @@ import { settle } from "@/lib/settle"
 export function PlanEditor({ session }: { session: SessionInfo }) {
   const router = useRouter()
   const params = useParams<{ id: string }>()
-  const { t } = useLanguage()
+  const { t, language: uiLanguage } = useLanguage()
 
   const [draft, setDraft] = useState<EditorDraft | null>(null)
   const [status, setStatus] = useState<"loading" | "ready" | "missing">("loading")
@@ -52,6 +63,15 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
   const [areaError, setAreaError] = useState<string | null>(null)
   const [showTeaser, setShowTeaser] = useState(false)
   const [ticket, setTicket] = useState<string | null>(null)
+  // Deleting used to be instant and final. The removed action is held here so
+  // it can be put back with its metric, its position and its prerequisites.
+  const [undoable, setUndoable] = useState<RemovedAction | null>(null)
+  // A plan carries the language it was written in. When the interface moves
+  // away from it, the user is asked once what to do, and "keep my text" is
+  // remembered so the offer does not follow them around.
+  const [translating, setTranslating] = useState(false)
+  const [translateError, setTranslateError] = useState<string | null>(null)
+  const [keptLanguage, setKeptLanguage] = useState<Language | null>(null)
 
   const busy = useSyncExternalStore(subscribeBusy, isBusy, () => false)
 
@@ -75,6 +95,15 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
   // A run that is still in flight when this unmounts is abandoned either way;
   // what must not survive is the header believing one is active.
   useEffect(() => () => setBusy(false), [])
+
+  /** How long the undo offer stands before the removal becomes permanent. */
+  const UNDO_WINDOW_MS = 12_000
+
+  useEffect(() => {
+    if (!undoable) return
+    const timer = setTimeout(() => setUndoable(null), UNDO_WINDOW_MS)
+    return () => clearTimeout(timer)
+  }, [undoable])
 
   /** Applies a change and persists it in one step, so the two cannot drift. */
   const update = useCallback((change: (current: EditorDraft) => EditorDraft) => {
@@ -105,8 +134,8 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
           const subgoal = started.subgoals[index]
           if (!subgoal) return
           const siblings = contents.filter((_, i) => i !== index)
-          const result = settle(
-            await generateActionsForSubgoal(
+          const result = await settled(
+            generateActionsForSubgoal(
               subgoal.content,
               started.mainGoal,
               siblings,
@@ -174,8 +203,8 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
         const siblings = draft.subgoals
           .filter((_, i) => i !== subgoalIndex)
           .map((s) => s.content)
-        const result = settle(
-          await generateActionsForSubgoal(
+        const result = await settled(
+          generateActionsForSubgoal(
             subgoal.content,
             draft.mainGoal,
             siblings,
@@ -214,8 +243,8 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
           return
         }
 
-        const result = settle(
-          await analyzeDependencies(
+        const result = await settled(
+          analyzeDependencies(
             actions,
             subgoal.content,
             current.mainGoal,
@@ -238,6 +267,41 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
     setDraft((latest) => (latest ? saveDraft({ ...latest, step: "visualization" }) : latest))
     setBusy(false)
   }, [])
+
+  /**
+   * Rewrites the plan's text in the interface language.
+   *
+   * Applied to the draft as it stands when the response lands, not to the one
+   * captured when the request went out; if the plan changed shape meanwhile the
+   * length check fails and nothing is written, which is the safe outcome.
+   */
+  const handleTranslateContent = useCallback(async () => {
+    if (!draft) return
+    setTranslating(true)
+    setTranslateError(null)
+    setBusy(true)
+    try {
+      const result = await settled(
+        translatePlanText(draftToStrings(draft), uiLanguage, newTicket()),
+      )
+      if (!result.ok) {
+        setTranslateError(result.error)
+        return
+      }
+      let applied = false
+      setDraft((latest) => {
+        if (!latest) return latest
+        const out = applyTranslations(latest, result.data, uiLanguage)
+        if (!out.ok) return latest
+        applied = true
+        return saveDraft(out.draft)
+      })
+      if (!applied) setTranslateError("ai.error.malformed")
+    } finally {
+      setTranslating(false)
+      setBusy(false)
+    }
+  }, [draft, uiLanguage])
 
   const handleFinishReview = useCallback(() => {
     if (!draft) return
@@ -282,7 +346,13 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
           }
           onStartEdit={(i) => update((d) => patchSubgoal(d, i, { isEditing: true }))}
           onSaveEdit={(i) =>
-            update((d) => patchSubgoal(d, i, { isEditing: false, isConfirmed: true }))
+            update((d) => {
+              // The button is disabled for a blank box; this is the backstop
+              // for Enter, autofill and anything else that gets here anyway.
+              const content = normalizeContent(d.subgoals[i]?.content ?? "")
+              if (!content) return d
+              return patchSubgoal(d, i, { content, isEditing: false, isConfirmed: true })
+            })
           }
           onAcceptAll={() => update(confirmAllSubgoals)}
           onAllConfirmed={handleGenerateActions}
@@ -317,13 +387,51 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
           }
           onStartEdit={(id, i) => update((d) => patchAction(d, id, i, { isEditing: true }))}
           onSaveEdit={(id, i) =>
-            update((d) => patchAction(d, id, i, { isEditing: false, isConfirmed: true }))
+            update((d) => {
+              const current = d.actions[id]?.[i]
+              if (!current) return d
+              // Both fields, not just the text: a measure typed with stray
+              // spaces was stored with them, and one that is only spaces has
+              // to become null rather than a string that looks like a value.
+              const clean = normalizeCell(current)
+              if (!clean.content) return d
+              return patchAction(d, id, i, {
+                content: clean.content,
+                metric: clean.metric,
+                isEditing: false,
+                isConfirmed: true,
+              })
+            })
           }
           onAcceptAllActions={(id) => update((d) => confirmAllActions(d, id))}
           onComplete={handleFinishReview}
           onRetrySubgoal={handleRetryFailed}
           onAddAction={(id) => update((d) => addAction(d, id))}
-          onRemoveAction={(id, i) => update((d) => removeAction(d, id, i))}
+          onMetricUpdate={(id, i, metric) =>
+            update((d) => patchAction(d, id, i, { metric: metric || null }))
+          }
+          onRemoveAction={(id, i) => {
+            // Capture before the removal, so undo can restore the metric,
+            // the position and the prerequisite edges — not just the text.
+            const removed = removalOf(draft, id, i)
+            update((d) => removeAction(d, id, i))
+            if (removed) setUndoable(removed)
+          }}
+          undoable={
+            undoable
+              ? {
+                  content: undoable.cell.content,
+                  area:
+                    draft.subgoals.findIndex((s) => s.id === undoable.subgoalId) + 1,
+                }
+              : null
+          }
+          onUndoRemove={() => {
+            if (!undoable) return
+            update((d) => restoreAction(d, undoable))
+            setUndoable(null)
+          }}
+          onDismissUndo={() => setUndoable(null)}
           onRegenerateArea={handleRegenerateArea}
           regeneratingArea={regeneratingArea}
           areaError={areaError ? t(areaError) : null}
@@ -349,10 +457,25 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
     )
   }
 
+  const languageMismatch =
+    draft.language !== uiLanguage && keptLanguage !== uiLanguage
+
   return (
     <>
       {showTeaser && <TeaserSession draft={draft} onClose={() => setShowTeaser(false)} />}
       <StepProgress current={draft.step} onNavigate={goTo} busy={busy} />
+      {languageMismatch && (
+        <div className="px-4 pt-4">
+          <LanguageChangePrompt
+            source={draft.language}
+            target={uiLanguage}
+            busy={translating}
+            error={translateError ? t(translateError) : null}
+            onTranslate={handleTranslateContent}
+            onKeep={() => setKeptLanguage(uiLanguage)}
+          />
+        </div>
+      )}
       {screen()}
     </>
   )

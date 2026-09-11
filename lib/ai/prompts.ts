@@ -182,3 +182,27 @@ entirely.
 Be concrete and cite indices. If the plan is sound in one of these respects,
 return an empty list for it rather than inventing a criticism.`
 }
+
+/**
+ * Translating an existing plan.
+ *
+ * Numbered lines, because the mapping back is positional: the count and the
+ * order are the contract, and a dropped line would shift every later cell.
+ */
+export function translatePrompt(items: string[], target: Language): string {
+  const numbered = items.map((text, index) => `${index + 1}. ${text}`).join("\n")
+  return `Translate a goal plan into ${LANGUAGE_NAMES[target]}.
+
+Return exactly ${items.length} translations, in the same order as the input.
+Line ${items.length} must be the translation of line ${items.length}.
+
+Rules:
+- Translate meaning, not words. These are goals and concrete actions; keep them
+  as short and as actionable as the original.
+- A line that is empty stays empty. Never invent text for it.
+- Keep numbers, units, dates and proper nouns exactly as they are.
+- Do not merge, split, reorder, add or drop lines.
+
+Lines:
+${numbered}`
+}

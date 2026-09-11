@@ -17,8 +17,8 @@ import {
   type EditorCell,
   type EditorDraft,
   type Language,
-} from "../types"
-import { breakCycles } from "../graph"
+} from "../types.ts"
+import { breakCycles } from "../graph.ts"
 
 const INDEX_KEY = "mandalart.drafts"
 const TOKEN_KEY = "mandalart.draftToken"
@@ -186,7 +186,7 @@ export function withActions(
 // Cell edits
 // ---------------------------------------------------------------------------
 
-type CellPatch = Partial<Pick<EditorCell, "content" | "isConfirmed" | "isEditing">>
+type CellPatch = Partial<Pick<EditorCell, "content" | "metric" | "isConfirmed" | "isEditing">>
 
 export function patchSubgoal(
   draft: EditorDraft,
@@ -239,6 +239,64 @@ export function addAction(draft: EditorDraft, subgoalId: string): EditorDraft {
 }
 
 /** Removes one action, and any dependency edge that pointed at it. */
+/**
+ * Everything a removal destroys, captured before it happens.
+ *
+ * Deleting used to drop the cell outright, so re-adding gave a blank box with
+ * no metric — the generated measure was simply gone, and there was no undo.
+ * Handing this back lets the caller put the action back exactly as it was.
+ */
+export interface RemovedAction {
+  subgoalId: string
+  index: number
+  cell: EditorCell
+  /** Prerequisite edges that pointed at, or came from, the removed action. */
+  edges: ActionDependency[]
+}
+
+/** What `removeAction` is about to discard, or null when there is nothing there. */
+export function removalOf(
+  draft: EditorDraft,
+  subgoalId: string,
+  index: number,
+): RemovedAction | null {
+  const cell = draft.actions[subgoalId]?.[index]
+  if (!cell) return null
+  return {
+    subgoalId,
+    index,
+    cell,
+    edges: draft.dependencies.filter(
+      (edge) => edge.actionId === cell.id || edge.dependsOnId === cell.id,
+    ),
+  }
+}
+
+/**
+ * Puts a removed action back where it was.
+ *
+ * Inserted at its old index rather than appended, so undo does not quietly
+ * reorder the area — the position is part of what the user is restoring.
+ */
+export function restoreAction(draft: EditorDraft, removed: RemovedAction): EditorDraft {
+  const list = draft.actions[removed.subgoalId] ?? []
+  if (list.length >= ACTIONS_PER_SUBGOAL) return draft
+  if (list.some((cell) => cell.id === removed.cell.id)) return draft
+
+  const at = Math.min(Math.max(removed.index, 0), list.length)
+  const next = [...list.slice(0, at), removed.cell, ...list.slice(at)]
+
+  const known = new Set(draft.dependencies.map((e) => `${e.actionId}->${e.dependsOnId}`))
+  return {
+    ...draft,
+    actions: { ...draft.actions, [removed.subgoalId]: next },
+    dependencies: [
+      ...draft.dependencies,
+      ...removed.edges.filter((e) => !known.has(`${e.actionId}->${e.dependsOnId}`)),
+    ],
+  }
+}
+
 export function removeAction(
   draft: EditorDraft,
   subgoalId: string,
