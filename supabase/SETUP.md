@@ -65,6 +65,9 @@ SQL editor. This round adds:
 - `plans.completed_at`, `archived_at`, `pinned`, `last_activity_at`, and
   `completed` as a status — for the dashboard
 - position uniqueness checked at commit, so a save can reorder actions
+- a correction to `last_activity_at`: adding the column stamped every existing
+  plan with the moment it was added. The dashboard already allows for this, so
+  running it is tidying up rather than urgent
 
 Until it is run, the app keeps working and plans stay in the browser; a
 signed-in user sees a notice that the database needs an update.

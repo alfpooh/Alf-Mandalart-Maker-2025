@@ -118,7 +118,11 @@
       }
     },
     "plan": {
-      "notFound": "만다라트를 찾을 수 없습니다",
+      "notFound": {
+        "title": "만다라트를 찾을 수 없습니다",
+        "body": "이 브라우저에 저장된 내용이 없습니다. 만든 기기의 브라우저에서 열거나 새로 시작해 주세요.",
+        "start": "새 만다라트 시작하기"
+      },
       "saveFailed": "저장하지 못했습니다. 만다라트는 이 브라우저에 남아 있습니다.",
       "claimFailed": "계정으로 옮기지 못했습니다. 만다라트는 이 브라우저에 그대로 있습니다.",
       "draftExpired": "임시 보관 기간(24시간)이 지났습니다.",
@@ -227,7 +231,8 @@
     "header": {
       "title": "만다라트 목표 플래너",
       "newPlan": "새 만다라트",
-      "confirmLeave": "생성이 진행 중입니다. 지금 나가면 이번 생성은 취소되고 오늘 사용량은 되돌아오지 않습니다. 나가시겠습니까?"
+      "confirmLeave": "생성이 진행 중입니다. 지금 나가면 이번 생성은 취소되고 오늘 사용량은 되돌아오지 않습니다. 나가시겠습니까?",
+      "dashboard": "내 만다라트"
     },
     "steps": {
       "label": "만다라트 작성 단계",
@@ -278,6 +283,121 @@
       "waitingBlank": "빈 칸을 채우면 계정에 저장합니다",
       "tooLong": "300자를 넘는 칸이 있어 아직 계정에 저장하지 못했습니다",
       "localOnly": "이 만다라트는 이 브라우저에만 저장됩니다"
+    },
+    "dashboard": {
+      "title": "내 만다라트",
+      "newPlan": "새 만다라트",
+      "quotaLeft": "오늘 {left}개 더 만들 수 있습니다",
+      "listLabel": "만다라트 목록",
+      "more": "더 보기 ({shown}/{total})",
+      "emptyFilter": "조건에 맞는 만다라트가 없습니다",
+      "summary": {
+        "inProgress": "진행 중",
+        "completed": "완료",
+        "lastActivity": "최근 활동"
+      },
+      "tabs": {
+        "label": "상태별 보기",
+        "all": "전체",
+        "active": "진행 중",
+        "completed": "완료",
+        "archived": "보관"
+      },
+      "sort": {
+        "label": "정렬",
+        "activity": "최근 활동순",
+        "created": "만든 날짜순",
+        "progress": "진척률순",
+        "name": "이름순"
+      },
+      "search": {
+        "label": "메인 목표 검색",
+        "placeholder": "메인 목표로 찾기"
+      },
+      "status": {
+        "writing": "작성 중",
+        "active": "진행 중",
+        "completed": "완료",
+        "archived": "보관됨"
+      },
+      "card": {
+        "written": "작성 {filled}/{total}",
+        "done": "완료한 액션 {done}/{total}",
+        "progress": "{pct}%",
+        "areas": "영역별 진척",
+        "areasWritten": "영역별 작성",
+        "area": "영역 {n} 진척 {pct}%",
+        "areaWritten": "영역 {n} 작성 {pct}%",
+        "lastActivity": "최근 활동 {date}",
+        "created": "만든 날 {date}",
+        "noContent": "계정에 내용이 아직 없습니다. 만든 브라우저에서 열면 계정에 저장됩니다.",
+        "select": "{goal} 선택",
+        "pin": "{goal} 상단 고정",
+        "unpin": "{goal} 고정 해제",
+        "manage": "{goal} 관리",
+        "manageShort": "관리"
+      },
+      "bulk": {
+        "selected": "{n}개 선택됨",
+        "archive": "보관",
+        "restore": "복원",
+        "clear": "선택 해제"
+      },
+      "manage": {
+        "title": "만다라트 관리",
+        "renameLabel": "메인 목표",
+        "renameSave": "이름 저장",
+        "complete": "완료로 표시",
+        "reopen": "진행 중으로 되돌리기",
+        "archive": "보관",
+        "restore": "보관 해제",
+        "archiveHint": "목록에서 숨기고 내용은 그대로 둡니다.",
+        "duplicate": "복제",
+        "duplicateHint": "같은 서브목표와 액션으로 새 만다라트를 만듭니다. 진척과 진행 보고는 복사하지 않습니다.",
+        "copyName": "{goal} (사본)",
+        "delete": "영구 삭제"
+      },
+      "delete": {
+        "title": "영구 삭제",
+        "counting": "진행 보고 수를 확인하는 중…",
+        "body": "서브목표, 액션, 진행 보고 {reports}건이 모두 삭제되며 되돌릴 수 없습니다. 나중에 다시 볼 수도 있다면 보관하세요.",
+        "confirmLabel": "확인을 위해 메인 목표를 그대로 입력하세요",
+        "confirm": "영구 삭제",
+        "archiveInstead": "대신 보관",
+        "back": "돌아가기"
+      },
+      "done": {
+        "renamed": "이름을 바꿨습니다",
+        "archived": "{n}개를 보관했습니다",
+        "restored": "{n}개를 복원했습니다",
+        "completed": "완료로 표시했습니다",
+        "reopened": "진행 중으로 되돌렸습니다",
+        "duplicated": "복제했습니다",
+        "deleted": "삭제했습니다",
+        "pinned": "상단에 고정했습니다",
+        "unpinned": "고정을 해제했습니다"
+      },
+      "error": {
+        "failed": "처리하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        "loadFailed": "목록을 불러오지 못했습니다. 새로고침해 주세요.",
+        "nameInvalid": "메인 목표는 1자 이상 500자 이하여야 합니다.",
+        "confirmMismatch": "입력한 내용이 메인 목표와 다릅니다.",
+        "noContent": "계정에 내용이 없어 복제할 수 없습니다.",
+        "otherAccount": "다른 계정에 저장된 만다라트라 이 계정에 저장할 수 없습니다."
+      },
+      "empty": {
+        "title": "아직 만다라트가 없습니다",
+        "body": "목표 하나를 적으면 영역 8개와 액션 64개로 나눠 드립니다.",
+        "start": "첫 만다라트 만들기"
+      },
+      "unsaved": {
+        "title": "계정에 저장하지 않은 만다라트 {n}개",
+        "body": "이 브라우저에만 있어 다른 기기에서는 보이지 않습니다. 로그인 전에 만든 초안은 24시간 뒤 사라집니다.",
+        "save": "계정에 저장",
+        "saving": "저장 중…",
+        "saved": "{n}개를 계정에 저장했습니다",
+        "partial": "{failed}개는 저장하지 못했습니다. 이 브라우저에는 그대로 있습니다."
+      }
     }
   },
   "en": {
@@ -399,7 +519,11 @@
       }
     },
     "plan": {
-      "notFound": "Mandalart not found",
+      "notFound": {
+        "title": "Mandalart not found",
+        "body": "Nothing for it is saved in this browser. Open it in the browser where you made it, or start a new one.",
+        "start": "Start a new Mandalart"
+      },
       "saveFailed": "Couldn't save to your account. The Mandalart is still in this browser.",
       "claimFailed": "Couldn't move it to your account. The Mandalart is still in this browser.",
       "draftExpired": "The 24-hour holding window has passed.",
@@ -508,7 +632,8 @@
     "header": {
       "title": "Mandalart Goal Planner",
       "newPlan": "New Mandalart",
-      "confirmLeave": "A run is in progress. Leaving now cancels it, and today's usage is not refunded. Leave anyway?"
+      "confirmLeave": "A run is in progress. Leaving now cancels it, and today's usage is not refunded. Leave anyway?",
+      "dashboard": "My Mandalarts"
     },
     "steps": {
       "label": "Mandalart steps",
@@ -559,6 +684,121 @@
       "waitingBlank": "Saves to your account once every box is filled",
       "tooLong": "A box is over 300 characters, so this isn't saved to your account yet",
       "localOnly": "This Mandalart is saved in this browser only"
+    },
+    "dashboard": {
+      "title": "My Mandalarts",
+      "newPlan": "New Mandalart",
+      "quotaLeft": "{left} more today",
+      "listLabel": "Mandalarts",
+      "more": "Show more ({shown}/{total})",
+      "emptyFilter": "No Mandalarts match",
+      "summary": {
+        "inProgress": "In progress",
+        "completed": "Completed",
+        "lastActivity": "Last activity"
+      },
+      "tabs": {
+        "label": "Show by status",
+        "all": "All",
+        "active": "In progress",
+        "completed": "Completed",
+        "archived": "Archived"
+      },
+      "sort": {
+        "label": "Sort",
+        "activity": "Recent activity",
+        "created": "Date created",
+        "progress": "Progress",
+        "name": "Name"
+      },
+      "search": {
+        "label": "Search main goals",
+        "placeholder": "Find by main goal"
+      },
+      "status": {
+        "writing": "Drafting",
+        "active": "In progress",
+        "completed": "Completed",
+        "archived": "Archived"
+      },
+      "card": {
+        "written": "{filled}/{total} written",
+        "done": "{done}/{total} actions done",
+        "progress": "{pct}%",
+        "areas": "Progress by area",
+        "areasWritten": "Written by area",
+        "area": "Area {n}: {pct}% progress",
+        "areaWritten": "Area {n}: {pct}% written",
+        "lastActivity": "Last activity {date}",
+        "created": "Created {date}",
+        "noContent": "Its content isn't in your account yet. Open it in the browser where you made it to save it.",
+        "select": "Select {goal}",
+        "pin": "Pin {goal}",
+        "unpin": "Unpin {goal}",
+        "manage": "Manage {goal}",
+        "manageShort": "Manage"
+      },
+      "bulk": {
+        "selected": "{n} selected",
+        "archive": "Archive",
+        "restore": "Restore",
+        "clear": "Clear selection"
+      },
+      "manage": {
+        "title": "Manage Mandalart",
+        "renameLabel": "Main goal",
+        "renameSave": "Save name",
+        "complete": "Mark as completed",
+        "reopen": "Move back to in progress",
+        "archive": "Archive",
+        "restore": "Restore from archive",
+        "archiveHint": "Hides it from the list and keeps everything in it.",
+        "duplicate": "Duplicate",
+        "duplicateHint": "Starts a new Mandalart with the same subgoals and actions. Progress and reports aren't copied.",
+        "copyName": "{goal} (copy)",
+        "delete": "Delete permanently"
+      },
+      "delete": {
+        "title": "Delete permanently",
+        "counting": "Counting progress reports…",
+        "body": "Its subgoals, actions and {reports} progress reports will all be deleted, and this can't be undone. If you might want it later, archive it instead.",
+        "confirmLabel": "Type the main goal exactly to confirm",
+        "confirm": "Delete permanently",
+        "archiveInstead": "Archive instead",
+        "back": "Go back"
+      },
+      "done": {
+        "renamed": "Renamed",
+        "archived": "Archived {n}",
+        "restored": "Restored {n}",
+        "completed": "Marked as completed",
+        "reopened": "Moved back to in progress",
+        "duplicated": "Duplicated",
+        "deleted": "Deleted",
+        "pinned": "Pinned to the top",
+        "unpinned": "Unpinned"
+      },
+      "error": {
+        "failed": "That didn't go through. Try again in a moment.",
+        "loadFailed": "Couldn't load your Mandalarts. Refresh the page to try again.",
+        "nameInvalid": "The main goal needs between 1 and 500 characters.",
+        "confirmMismatch": "That doesn't match the main goal.",
+        "noContent": "There's no content in your account to duplicate yet.",
+        "otherAccount": "This Mandalart is saved to a different account, so it can't be saved to this one."
+      },
+      "empty": {
+        "title": "No Mandalarts yet",
+        "body": "Write one goal and it's broken down into 8 areas and 64 actions.",
+        "start": "Make your first Mandalart"
+      },
+      "unsaved": {
+        "title": "Not saved to your account: {n}",
+        "body": "They're only in this browser, so your other devices can't see them. Drafts made before signing in disappear after 24 hours.",
+        "save": "Save to account",
+        "saving": "Saving…",
+        "saved": "Saved {n} to your account",
+        "partial": "{failed} couldn't be saved. They're still in this browser."
+      }
     }
   },
   "fi": {
@@ -680,7 +920,11 @@
       }
     },
     "plan": {
-      "notFound": "Mandalartia ei löydy",
+      "notFound": {
+        "title": "Mandalartia ei löydy",
+        "body": "Tässä selaimessa ei ole sille tallennettua sisältöä. Avaa se selaimessa, jossa loit sen, tai aloita uusi.",
+        "start": "Aloita uusi mandalart"
+      },
       "saveFailed": "Tallennus tilillesi ei onnistunut. Mandalart on yhä tässä selaimessa.",
       "claimFailed": "Siirto tilillesi ei onnistunut. Mandalart on yhä tässä selaimessa.",
       "draftExpired": "24 tunnin säilytysaika on umpeutunut.",
@@ -789,7 +1033,8 @@
     "header": {
       "title": "Mandalart-tavoitesuunnittelija",
       "newPlan": "Uusi Mandalart",
-      "confirmLeave": "Luonti on kesken. Poistuminen peruu sen, eikä päivän käyttöä palauteta. Poistutaanko silti?"
+      "confirmLeave": "Luonti on kesken. Poistuminen peruu sen, eikä päivän käyttöä palauteta. Poistutaanko silti?",
+      "dashboard": "Omat mandalartit"
     },
     "steps": {
       "label": "Mandalartin vaiheet",
@@ -840,6 +1085,121 @@
       "waitingBlank": "Tallentuu tiliisi, kun kaikki kentät on täytetty",
       "tooLong": "Jokin kenttä ylittää 300 merkkiä, joten tätä ei ole vielä tallennettu tiliisi",
       "localOnly": "Tämä mandala on tallennettu vain tähän selaimeen"
+    },
+    "dashboard": {
+      "title": "Omat mandalartit",
+      "newPlan": "Uusi mandalart",
+      "quotaLeft": "Tänään vielä {left}",
+      "listLabel": "Mandalartit",
+      "more": "Näytä lisää ({shown}/{total})",
+      "emptyFilter": "Ei hakua vastaavia mandalarteja",
+      "summary": {
+        "inProgress": "Käynnissä",
+        "completed": "Valmiit",
+        "lastActivity": "Viimeisin toiminta"
+      },
+      "tabs": {
+        "label": "Näytä tilan mukaan",
+        "all": "Kaikki",
+        "active": "Käynnissä",
+        "completed": "Valmiit",
+        "archived": "Arkisto"
+      },
+      "sort": {
+        "label": "Järjestys",
+        "activity": "Viimeisin toiminta",
+        "created": "Luontipäivä",
+        "progress": "Edistyminen",
+        "name": "Nimi"
+      },
+      "search": {
+        "label": "Hae päätavoitteista",
+        "placeholder": "Etsi päätavoitteella"
+      },
+      "status": {
+        "writing": "Luonnos",
+        "active": "Käynnissä",
+        "completed": "Valmis",
+        "archived": "Arkistoitu"
+      },
+      "card": {
+        "written": "{filled}/{total} kirjoitettu",
+        "done": "{done}/{total} toimenpidettä valmiina",
+        "progress": "{pct} %",
+        "areas": "Edistyminen alueittain",
+        "areasWritten": "Kirjoitettu alueittain",
+        "area": "Alue {n}: edistyminen {pct} %",
+        "areaWritten": "Alue {n}: kirjoitettu {pct} %",
+        "lastActivity": "Viimeksi {date}",
+        "created": "Luotu {date}",
+        "noContent": "Sisältö ei ole vielä tililläsi. Avaa se selaimessa, jossa loit sen, niin se tallentuu.",
+        "select": "Valitse {goal}",
+        "pin": "Kiinnitä ylös: {goal}",
+        "unpin": "Irrota: {goal}",
+        "manage": "Hallitse: {goal}",
+        "manageShort": "Hallitse"
+      },
+      "bulk": {
+        "selected": "{n} valittu",
+        "archive": "Arkistoi",
+        "restore": "Palauta",
+        "clear": "Poista valinnat"
+      },
+      "manage": {
+        "title": "Hallitse mandalartia",
+        "renameLabel": "Päätavoite",
+        "renameSave": "Tallenna nimi",
+        "complete": "Merkitse valmiiksi",
+        "reopen": "Palauta käynnissä oleviin",
+        "archive": "Arkistoi",
+        "restore": "Palauta arkistosta",
+        "archiveHint": "Piilottaa sen listasta ja säilyttää kaiken sisällön.",
+        "duplicate": "Monista",
+        "duplicateHint": "Aloittaa uuden mandalartin samoilla alatavoitteilla ja toimenpiteillä. Edistymistä ja raportteja ei kopioida.",
+        "copyName": "{goal} (kopio)",
+        "delete": "Poista pysyvästi"
+      },
+      "delete": {
+        "title": "Poista pysyvästi",
+        "counting": "Lasketaan edistymisraportteja…",
+        "body": "Alatavoitteet, toimenpiteet ja {reports} edistymisraporttia poistetaan, eikä tätä voi perua. Jos saatat tarvita sitä myöhemmin, arkistoi se.",
+        "confirmLabel": "Vahvista kirjoittamalla päätavoite täsmälleen",
+        "confirm": "Poista pysyvästi",
+        "archiveInstead": "Arkistoi sen sijaan",
+        "back": "Takaisin"
+      },
+      "done": {
+        "renamed": "Nimetty uudelleen",
+        "archived": "Arkistoitu: {n}",
+        "restored": "Palautettu: {n}",
+        "completed": "Merkitty valmiiksi",
+        "reopened": "Palautettu käynnissä oleviin",
+        "duplicated": "Monistettu",
+        "deleted": "Poistettu",
+        "pinned": "Kiinnitetty ylös",
+        "unpinned": "Kiinnitys poistettu"
+      },
+      "error": {
+        "failed": "Toiminto ei onnistunut. Yritä hetken kuluttua uudelleen.",
+        "loadFailed": "Mandalartien lataus epäonnistui. Päivitä sivu.",
+        "nameInvalid": "Päätavoitteessa on oltava 1–500 merkkiä.",
+        "confirmMismatch": "Teksti ei vastaa päätavoitetta.",
+        "noContent": "Tililläsi ei ole vielä monistettavaa sisältöä.",
+        "otherAccount": "Tämä mandalart on tallennettu toiselle tilille, joten sitä ei voi tallentaa tälle."
+      },
+      "empty": {
+        "title": "Ei vielä mandalarteja",
+        "body": "Kirjoita yksi tavoite, niin se jaetaan 8 alueeseen ja 64 toimenpiteeseen.",
+        "start": "Tee ensimmäinen mandalartisi"
+      },
+      "unsaved": {
+        "title": "Tallentamatta tilille: {n}",
+        "body": "Ne ovat vain tässä selaimessa, joten muut laitteesi eivät näe niitä. Ennen kirjautumista tehdyt luonnokset katoavat 24 tunnin kuluttua.",
+        "save": "Tallenna tilille",
+        "saving": "Tallennetaan…",
+        "saved": "Tallennettu tilille: {n}",
+        "partial": "{failed} ei voitu tallentaa. Ne ovat yhä tässä selaimessa."
+      }
     }
   }
 }

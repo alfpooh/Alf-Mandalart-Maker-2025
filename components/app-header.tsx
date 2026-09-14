@@ -55,7 +55,8 @@ export function AppHeader({ session }: { session: SessionInfo }) {
         </Link>
 
         <div className="ml-auto flex items-center gap-2">
-          {mounted && !onHome && (
+          {/* The dashboard has its own button, which also shows the day's quota. */}
+          {mounted && !onHome && pathname !== "/dashboard" && (
             <button
               type="button"
               onClick={startNew}

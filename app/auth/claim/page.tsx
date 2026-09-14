@@ -19,7 +19,7 @@ import {
  *
  * A client page because the draft token lives in the browser. If there is no
  * token the user simply signed in without a plan in progress, which is not an
- * error — send them home.
+ * error — send them to their dashboard.
  */
 export default function ClaimPage() {
   const router = useRouter()
@@ -29,7 +29,7 @@ export default function ClaimPage() {
   useEffect(() => {
     const token = readDraftToken()
     if (!token) {
-      router.replace("/")
+      router.replace("/dashboard")
       return
     }
 

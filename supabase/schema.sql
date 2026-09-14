@@ -318,6 +318,12 @@ alter table public.plans    add column if not exists pinned           boolean   
 -- plans.updated_at only moves when the plans row itself changes; editing an
 -- action or reporting progress never touches it. This column does.
 alter table public.plans    add column if not exists last_activity_at timestamptz not null default now();
+-- Adding the column stamped every existing plan with the moment it was added.
+-- Real activity also updates the plans row, so a value later than updated_at
+-- is that stamp, not activity. This only ever lowers the value, so a second
+-- run changes nothing. (Anything that records activity must keep touching the
+-- plans row, or this would undo it.)
+update public.plans set last_activity_at = updated_at where last_activity_at > updated_at;
 alter table public.subgoals add column if not exists confirmed        boolean     not null default false;
 alter table public.actions  add column if not exists confirmed        boolean     not null default false;
 

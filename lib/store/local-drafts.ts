@@ -192,10 +192,17 @@ export function listDrafts(): EditorDraft[] {
   return drafts.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
 }
 
-/** Clears drafts past the 24h window. Safe to call on every load. */
+/**
+ * Clears drafts past the 24h window. Safe to call on every load.
+ *
+ * A copy that has reached an account is kept. Its home is the account, not
+ * this window, and one still holding an unsaved change would otherwise lose
+ * that change for good the next time the home screen opened.
+ */
 export function purgeExpiredDrafts(): void {
   const cutoff = Date.now() - MAX_AGE_MS
   for (const draft of listDrafts()) {
+    if (draft.serverSyncedAt) continue
     if (Date.parse(draft.updatedAt) < cutoff) deleteDraft(draft.id)
   }
 }
@@ -423,6 +430,28 @@ export function readDraftToken(): string | null {
     if (!raw) return null
     const parsed = JSON.parse(raw) as { token?: unknown }
     return typeof parsed?.token === "string" ? parsed.token : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The stored token together with the plan it opens.
+ *
+ * Only the latest anonymous draft has a token — starting another replaces it —
+ * so a caller holding some other draft needs to know whether this token is
+ * the one for it.
+ */
+export function readDraftTokenEntry(): { planId: string; token: string } | null {
+  const store = storage()
+  if (!store) return null
+  try {
+    const raw = store.getItem(TOKEN_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { planId?: unknown; token?: unknown }
+    return typeof parsed?.planId === "string" && typeof parsed?.token === "string"
+      ? { planId: parsed.planId, token: parsed.token }
+      : null
   } catch {
     return null
   }

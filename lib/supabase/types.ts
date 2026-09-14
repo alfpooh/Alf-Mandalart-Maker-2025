@@ -51,6 +51,8 @@ export interface Database {
           language?: string
           status?: string
           expires_at?: string | null
+          step?: string
+          pinned?: boolean
         }
         Update: Partial<{
           main_goal: string

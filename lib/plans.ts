@@ -321,7 +321,7 @@ export async function claimDraft(
   if (!user) return { ok: false, error: "auth.required" }
 
   const admin = getAdminClient()
-  if (!admin) return { ok: false, error: "plan.notFound" }
+  if (!admin) return { ok: false, error: "plan.notFound.title" }
 
   const { data, error } = await admin.rpc("claim_draft", {
     token: draftToken,

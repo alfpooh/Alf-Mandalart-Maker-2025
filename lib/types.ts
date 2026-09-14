@@ -63,7 +63,7 @@ export function progressLabelKey(value: ProgressValue): string {
 // Core entities
 // ---------------------------------------------------------------------------
 
-export type PlanStatus = "draft" | "active" | "archived"
+export type PlanStatus = "draft" | "active" | "completed" | "archived"
 
 export interface Plan {
   id: string
