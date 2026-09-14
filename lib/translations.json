@@ -122,7 +122,9 @@
       "saveFailed": "저장하지 못했습니다. 만다라트는 이 브라우저에 남아 있습니다.",
       "claimFailed": "계정으로 옮기지 못했습니다. 만다라트는 이 브라우저에 그대로 있습니다.",
       "draftExpired": "임시 보관 기간(24시간)이 지났습니다.",
-      "blankSubgoal": "비어 있는 서브목표가 있어 저장하지 못했습니다."
+      "blankSubgoal": "비어 있는 서브목표가 있어 저장하지 못했습니다.",
+      "schemaOutdated": "데이터베이스 업데이트가 필요해 계정에 저장하지 못했습니다. 이 브라우저에는 남아 있습니다.",
+      "missing": "계정에서 이 만다라트를 찾지 못했습니다. 이 브라우저에는 남아 있습니다."
     },
     "ai": {
       "error": {
@@ -269,6 +271,13 @@
         "translate": "내용도 번역하기",
         "translating": "번역 중..."
       }
+    },
+    "sync": {
+      "saving": "계정에 저장 중…",
+      "saved": "계정에 저장됨",
+      "waitingBlank": "빈 칸을 채우면 계정에 저장합니다",
+      "tooLong": "300자를 넘는 칸이 있어 아직 계정에 저장하지 못했습니다",
+      "localOnly": "이 만다라트는 이 브라우저에만 저장됩니다"
     }
   },
   "en": {
@@ -394,7 +403,9 @@
       "saveFailed": "Couldn't save to your account. The Mandalart is still in this browser.",
       "claimFailed": "Couldn't move it to your account. The Mandalart is still in this browser.",
       "draftExpired": "The 24-hour holding window has passed.",
-      "blankSubgoal": "Could not save: a subgoal is empty."
+      "blankSubgoal": "Could not save: a subgoal is empty.",
+      "schemaOutdated": "The database needs an update before this can be saved to your account. It's still saved in this browser.",
+      "missing": "This Mandalart wasn't found in your account. It's still saved in this browser."
     },
     "ai": {
       "error": {
@@ -541,6 +552,13 @@
         "translate": "Translate content",
         "translating": "Translating..."
       }
+    },
+    "sync": {
+      "saving": "Saving to your account…",
+      "saved": "Saved to your account",
+      "waitingBlank": "Saves to your account once every box is filled",
+      "tooLong": "A box is over 300 characters, so this isn't saved to your account yet",
+      "localOnly": "This Mandalart is saved in this browser only"
     }
   },
   "fi": {
@@ -666,7 +684,9 @@
       "saveFailed": "Tallennus tilillesi ei onnistunut. Mandalart on yhä tässä selaimessa.",
       "claimFailed": "Siirto tilillesi ei onnistunut. Mandalart on yhä tässä selaimessa.",
       "draftExpired": "24 tunnin säilytysaika on umpeutunut.",
-      "blankSubgoal": "Tallennus epäonnistui: alatavoite on tyhjä."
+      "blankSubgoal": "Tallennus epäonnistui: alatavoite on tyhjä.",
+      "schemaOutdated": "Tietokanta on päivitettävä ennen kuin tämä voidaan tallentaa tiliisi. Se on yhä tallessa tässä selaimessa.",
+      "missing": "Tätä mandalaa ei löytynyt tililtäsi. Se on yhä tallessa tässä selaimessa."
     },
     "ai": {
       "error": {
@@ -813,6 +833,13 @@
         "translate": "Käännä sisältö",
         "translating": "Käännetään..."
       }
+    },
+    "sync": {
+      "saving": "Tallennetaan tiliisi…",
+      "saved": "Tallennettu tiliisi",
+      "waitingBlank": "Tallentuu tiliisi, kun kaikki kentät on täytetty",
+      "tooLong": "Jokin kenttä ylittää 300 merkkiä, joten tätä ei ole vielä tallennettu tiliisi",
+      "localOnly": "Tämä mandala on tallennettu vain tähän selaimeen"
     }
   }
 }

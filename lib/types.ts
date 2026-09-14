@@ -221,6 +221,15 @@ export interface EditorDraft {
   dependencies: ActionDependency[]
   createdAt: string
   updatedAt: string
+  /**
+   * True when this copy holds a change the account's server copy does not.
+   * Set by every local save and cleared only by a confirmed server save, so
+   * deciding which copy to open never has to compare two machines' clocks.
+   * Absent on drafts written before accounts could store plans.
+   */
+  pendingSync?: boolean
+  /** Server time of the last save that reached the account, if any. */
+  serverSyncedAt?: string
 }
 
 /**

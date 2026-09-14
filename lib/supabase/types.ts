@@ -37,6 +37,11 @@ export interface Database {
           created_at: string
           updated_at: string
           expires_at: string | null
+          step: string
+          completed_at: string | null
+          archived_at: string | null
+          pinned: boolean
+          last_activity_at: string
         }
         Insert: {
           id?: string
@@ -53,13 +58,18 @@ export interface Database {
           status: string
           is_public: boolean
           share_slug: string | null
+          step: string
+          completed_at: string | null
+          archived_at: string | null
+          pinned: boolean
+          last_activity_at: string
         }>
         Relationships: []
       }
       subgoals: {
-        Row: { id: string; plan_id: string; position: number; content: string }
-        Insert: { id?: string; plan_id: string; position: number; content: string }
-        Update: Partial<{ content: string }>
+        Row: { id: string; plan_id: string; position: number; content: string; confirmed: boolean }
+        Insert: { id?: string; plan_id: string; position: number; content: string; confirmed?: boolean }
+        Update: Partial<{ position: number; content: string; confirmed: boolean }>
         Relationships: []
       }
       actions: {
@@ -74,6 +84,7 @@ export interface Database {
           due_date: string | null
           progress: number
           updated_at: string
+          confirmed: boolean
         }
         Insert: {
           id?: string
@@ -85,6 +96,7 @@ export interface Database {
           cadence?: string
           due_date?: string | null
           progress?: number
+          confirmed?: boolean
         }
         Update: Partial<{
           content: string
@@ -92,6 +104,7 @@ export interface Database {
           cadence: string
           due_date: string | null
           progress: number
+          confirmed: boolean
         }>
         Relationships: []
       }
@@ -152,6 +165,11 @@ export interface Database {
         Returns: string | null
       }
       purge_expired: { Args: Record<string, never>; Returns: undefined }
+      save_plan_content: {
+        /** `p_payload` is a PlanPayload from lib/plan-sync.ts. */
+        Args: { p_plan_id: string; p_payload: unknown }
+        Returns: string
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

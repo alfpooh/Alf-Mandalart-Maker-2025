@@ -17,6 +17,7 @@ import {
 import { useLanguage } from "@/lib/language-context"
 import {
   addAction,
+  cacheDraft,
   confirmAllActions,
   confirmAllSubgoals,
   loadDraft,
@@ -32,12 +33,15 @@ import {
 } from "@/lib/store/local-drafts"
 import type { RemovedAction } from "@/lib/store/local-drafts"
 import type { AppStep, EditorDraft } from "@/lib/types"
-import type { SessionInfo } from "@/lib/plans"
+import type { LoadResult, SessionInfo } from "@/lib/plans"
 import { newTicket } from "@/lib/ticket"
 import { isBusy, setBusy, subscribeBusy } from "@/lib/busy"
 import { TeaserSession } from "@/components/teaser-session"
 import { markTeaserSeen, wasTeaserSeen } from "@/lib/store/local-drafts"
 import { settled } from "@/lib/settle"
+import { SyncIndicator } from "@/components/sync-indicator"
+import { chooseInitialDraft } from "@/lib/plan-sync"
+import { usePlanSync } from "@/lib/use-plan-sync"
 import { LanguageChangePrompt } from "@/components/language-change-prompt"
 import { applyTranslations, draftToStrings } from "@/lib/translate-draft"
 import type { Language } from "@/lib/types"
@@ -50,7 +54,14 @@ import { normalizeCell, normalizeContent } from "@/lib/validation"
  * change, so a refresh mid-flow resumes where the user was rather than losing
  * all 64 cells.
  */
-export function PlanEditor({ session }: { session: SessionInfo }) {
+export function PlanEditor({
+  session,
+  initial = null,
+}: {
+  session: SessionInfo
+  /** The account's copy, read on the server; null when signed out. */
+  initial?: LoadResult | null
+}) {
   const router = useRouter()
   const params = useParams<{ id: string }>()
   const { t, language: uiLanguage } = useLanguage()
@@ -74,6 +85,7 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
   const [keptLanguage, setKeptLanguage] = useState<Language | null>(null)
 
   const busy = useSyncExternalStore(subscribeBusy, isBusy, () => false)
+  const sync = usePlanSync(draft, session.signedIn && session.configured)
 
   // The teaser runs once a plan is finished, only for people who do not yet
   // have the features it shows, and only once per plan — a wall on every visit
@@ -87,10 +99,27 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
   }, [draft, session.signedIn, session.configured])
 
   useEffect(() => {
-    const found = loadDraft(params.id)
-    setDraft(found)
-    setStatus(found ? "ready" : "missing")
-  }, [params.id])
+    // Two copies may exist — this browser's and the account's. Which one opens
+    // is decided without comparing the two machines' clocks; see
+    // chooseInitialDraft.
+    const choice = chooseInitialDraft(
+      loadDraft(params.id),
+      initial?.status === "loaded" ? initial.draft : null,
+    )
+    if (choice.source === "none") {
+      setDraft(null)
+      setStatus("missing")
+      return
+    }
+    const opened =
+      choice.source === "server"
+        ? cacheDraft(choice.draft)
+        : choice.push
+          ? saveDraft(choice.draft) // marks it unsaved, so the sync sends it
+          : choice.draft
+    setDraft(opened)
+    setStatus("ready")
+  }, [params.id, initial])
 
   // A run that is still in flight when this unmounts is abandoned either way;
   // what must not survive is the header believing one is active.
@@ -464,6 +493,7 @@ export function PlanEditor({ session }: { session: SessionInfo }) {
     <>
       {showTeaser && <TeaserSession draft={draft} onClose={() => setShowTeaser(false)} />}
       <StepProgress current={draft.step} onNavigate={goTo} busy={busy} />
+      <SyncIndicator status={sync.status} />
       {languageMismatch && (
         <div className="px-4 pt-4">
           <LanguageChangePrompt

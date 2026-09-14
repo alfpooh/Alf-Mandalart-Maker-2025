@@ -33,13 +33,41 @@ supabase db push
 ```
 
 It creates seven tables, their row level security policies, a trigger that
-makes a profile row for each new sign-in, and two functions:
+makes a profile row for each new sign-in, and three functions:
 
 - `claim_draft(token, new_owner)` — moves an anonymous draft onto an account in
   one statement. A half-finished claim would leave someone's Mandalart owned by
   nobody and readable by nobody, so it must not be split into separate updates.
 - `purge_expired()` — deletes drafts past their 24 hours and quota rows older
   than a week.
+
+### Saving plans to accounts — `save_plan_content(plan_id, payload)`
+
+Writes a plan's subgoals, actions and prerequisites in one transaction and keeps
+every row's id. The earlier approach deleted the subgoals and inserted them
+again; because the child tables cascade, that would have erased every action's
+progress, due date and report history on each save.
+
+It runs as the caller (`security invoker`), so row level security decides whose
+plan it is — a user who does not own the plan gets `plan not found`. It is not
+executable by `anon`.
+
+### Upgrading an existing project
+
+`schema.sql` is written to be run again. Every statement checks before it acts,
+so re-running it on a project that already has the tables changes only what is
+new. **After pulling a change to this file, run the whole file again** in the
+SQL editor. This round adds:
+
+- `save_plan_content` (above)
+- `plans.step`, and `confirmed` on subgoals and actions — what reopening a plan
+  on another device needs
+- `plans.completed_at`, `archived_at`, `pinned`, `last_activity_at`, and
+  `completed` as a status — for the dashboard
+- position uniqueness checked at commit, so a save can reorder actions
+
+Until it is run, the app keeps working and plans stay in the browser; a
+signed-in user sees a notice that the database needs an update.
 
 ## 3. Schedule the cleanup
 

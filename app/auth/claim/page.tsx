@@ -3,9 +3,16 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
-import { claimDraft } from "@/lib/plans"
+import { claimDraft, savePlan } from "@/lib/plans"
+import { settled } from "@/lib/settle"
 import { useLanguage } from "@/lib/language-context"
-import { clearDraftToken, readDraftToken } from "@/lib/store/local-drafts"
+import {
+  clearDraftToken,
+  loadDraft,
+  markSynced,
+  readDraftToken,
+  saveDraft,
+} from "@/lib/store/local-drafts"
 
 /**
  * Runs straight after sign-in: hands the anonymous draft to the new account.
@@ -27,11 +34,22 @@ export default function ClaimPage() {
     }
 
     let cancelled = false
-    claimDraft(token).then((result) => {
+    claimDraft(token).then(async (result) => {
       if (cancelled) return
       if (result.ok && result.planId) {
         clearDraftToken()
-        router.replace(`/plan/${result.planId}`)
+        // The plan row now belongs to this account but is still empty: its
+        // content has only ever lived in this browser. Send it before moving
+        // on, so the account holds the plan even if this tab is closed next.
+        // A failure is not fatal — the copy stays marked unsaved and the
+        // editor sends it again.
+        const local = loadDraft(result.planId)
+        if (local) {
+          const sent = saveDraft(local)
+          const saved = await settled(savePlan(sent))
+          if (saved.ok) markSynced(sent.id, sent.updatedAt, saved.savedAt)
+        }
+        if (!cancelled) router.replace(`/plan/${result.planId}`)
       } else {
         // The local copy is untouched, so nothing is lost — say so plainly.
         setError(result.error ?? "plan.claimFailed")

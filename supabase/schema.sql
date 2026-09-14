@@ -31,7 +31,7 @@ create table if not exists public.plans (
   draft_token text unique,
   main_goal   text not null check (char_length(main_goal) between 1 and 500),
   language    text not null default 'en' check (language in ('ko', 'en', 'fi')),
-  status      text not null default 'draft' check (status in ('draft', 'active', 'archived')),
+  status      text not null default 'draft' check (status in ('draft', 'active', 'completed', 'archived')),
   is_public   boolean not null default false,
   share_slug  text unique,
   created_at  timestamptz not null default now(),
@@ -300,3 +300,194 @@ end;
 $$;
 
 revoke all on function public.purge_expired() from public, anon;
+
+-- ===========================================================================
+-- Plan persistence that keeps ids (PRD §6.0), and dashboard columns (§6.8)
+--
+-- Safe on a project that already has everything above: every statement checks
+-- before it acts, so running this file a second time changes nothing.
+-- ===========================================================================
+
+-- What the editor needs to reopen a plan on another device. Without these a
+-- plan read back from the server has every cell unconfirmed and no idea which
+-- step it was on.
+alter table public.plans    add column if not exists step             text        not null default 'review-subgoals';
+alter table public.plans    add column if not exists completed_at     timestamptz;
+alter table public.plans    add column if not exists archived_at      timestamptz;
+alter table public.plans    add column if not exists pinned           boolean     not null default false;
+-- plans.updated_at only moves when the plans row itself changes; editing an
+-- action or reporting progress never touches it. This column does.
+alter table public.plans    add column if not exists last_activity_at timestamptz not null default now();
+alter table public.subgoals add column if not exists confirmed        boolean     not null default false;
+alter table public.actions  add column if not exists confirmed        boolean     not null default false;
+
+alter table public.plans drop constraint if exists plans_step_check;
+alter table public.plans add constraint plans_step_check check (step in (
+  'review-subgoals', 'generating-actions', 'review-actions', 'analyzing-order', 'visualization'
+));
+
+-- "Completed" is a status a person sets, not one inferred from progress (PRD
+-- D8). The original check was declared inline, so its name is whatever
+-- Postgres chose — replace every check on status rather than guess the name.
+do $$
+declare c record;
+begin
+  for c in
+    select conname from pg_constraint
+     where conrelid = 'public.plans'::regclass and contype = 'c'
+       and pg_get_constraintdef(oid) like '%status%'
+  loop
+    execute format('alter table public.plans drop constraint %I', c.conname);
+  end loop;
+end $$;
+alter table public.plans add constraint plans_status_check
+  check (status in ('draft', 'active', 'completed', 'archived'));
+
+create index if not exists plans_owner_activity_idx
+  on public.plans (owner_id, last_activity_at desc);
+
+-- Positions are unique per parent, but a save that reorders actions passes
+-- through moments where two rows share one. Checked at commit instead, the
+-- final order can be written in any sequence. An inline unique constraint
+-- cannot be altered into a deferrable one, so it is replaced.
+do $$
+declare c record;
+begin
+  for c in
+    select conname, conrelid::regclass::text as tbl from pg_constraint
+     where contype = 'u' and not condeferrable
+       and conrelid in ('public.subgoals'::regclass, 'public.actions'::regclass)
+  loop
+    execute format('alter table %s drop constraint %I', c.tbl, c.conname);
+  end loop;
+
+  if not exists (select 1 from pg_constraint where conname = 'subgoals_plan_position_key') then
+    alter table public.subgoals add constraint subgoals_plan_position_key
+      unique (plan_id, position) deferrable initially deferred;
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'actions_subgoal_position_key') then
+    alter table public.actions add constraint actions_subgoal_position_key
+      unique (subgoal_id, position) deferrable initially deferred;
+  end if;
+end $$;
+
+/**
+ * Writes a plan's content in one transaction, keeping every row's id.
+ *
+ * The previous save deleted all subgoals and inserted them again, and the
+ * child tables cascade — so each save would have erased every action's
+ * progress, dates and report history. This deletes only what the payload no
+ * longer contains, and upserts the rest by id.
+ *
+ * SECURITY INVOKER: row level security decides whose plan this is. A caller
+ * who does not own the plan sees no row and gets 'plan not found'. The service
+ * role bypasses RLS and must check ownership itself before calling.
+ *
+ * Payload (built by lib/plan-sync.ts draftToPayload):
+ *   { mainGoal, language, step,
+ *     subgoals:     [{ id, position, content, confirmed }],
+ *     actions:      [{ id, subgoalId, position, content, metric, confirmed }],
+ *     dependencies: [{ actionId, dependsOnId, rationale, confidence, userEdited }] }
+ */
+create or replace function public.save_plan_content(p_plan_id uuid, p_payload jsonb)
+returns timestamptz language plpgsql security invoker set search_path = public as $$
+declare
+  saved_at timestamptz := now();
+begin
+  if coalesce(jsonb_typeof(p_payload->'subgoals'), '') <> 'array'
+     or coalesce(jsonb_typeof(p_payload->'actions'), '') <> 'array' then
+    raise exception 'payload needs subgoals and actions arrays' using errcode = '22023';
+  end if;
+
+  perform 1 from public.plans where id = p_plan_id for update;
+  if not found then
+    raise exception 'plan % not found', p_plan_id using errcode = 'P0002';
+  end if;
+
+  update public.plans
+     set main_goal        = p_payload->>'mainGoal',
+         language         = coalesce(p_payload->>'language', language),
+         step             = coalesce(p_payload->>'step', step),
+         last_activity_at = saved_at
+   where id = p_plan_id;
+
+  -- NOT EXISTS rather than NOT IN: one null id in the payload would make NOT IN
+  -- match nothing and silently skip every deletion.
+  delete from public.actions a
+   where a.plan_id = p_plan_id
+     and not exists (
+       select 1 from jsonb_array_elements(p_payload->'actions') x
+        where (x->>'id')::uuid = a.id);
+
+  delete from public.subgoals s
+   where s.plan_id = p_plan_id
+     and not exists (
+       select 1 from jsonb_array_elements(p_payload->'subgoals') x
+        where (x->>'id')::uuid = s.id);
+
+  insert into public.subgoals (id, plan_id, position, content, confirmed)
+  select (x->>'id')::uuid, p_plan_id, (x->>'position')::smallint, x->>'content',
+         coalesce((x->>'confirmed')::boolean, false)
+    from jsonb_array_elements(p_payload->'subgoals') x
+  on conflict (id) do update
+     set position = excluded.position,
+         content  = excluded.content,
+         confirmed = excluded.confirmed
+   where subgoals.plan_id = p_plan_id;
+
+  -- An id that already belongs to another plan is neither inserted nor
+  -- updated above; refuse the whole save rather than store half of it.
+  if (select count(*) from public.subgoals where plan_id = p_plan_id)
+     <> jsonb_array_length(p_payload->'subgoals') then
+    raise exception 'subgoal ids do not all belong to plan %', p_plan_id using errcode = '22023';
+  end if;
+
+  if exists (
+    select 1 from jsonb_array_elements(p_payload->'actions') x
+     where not exists (
+       select 1 from public.subgoals s
+        where s.plan_id = p_plan_id and s.id = (x->>'subgoalId')::uuid)
+  ) then
+    raise exception 'an action names a subgoal outside plan %', p_plan_id using errcode = '22023';
+  end if;
+
+  -- progress, cadence and due_date are not in the payload and are left alone:
+  -- editing the plan must never reset how far along an action is.
+  insert into public.actions (id, plan_id, subgoal_id, position, content, metric, confirmed)
+  select (x->>'id')::uuid, p_plan_id, (x->>'subgoalId')::uuid, (x->>'position')::smallint,
+         x->>'content', nullif(x->>'metric', ''), coalesce((x->>'confirmed')::boolean, false)
+    from jsonb_array_elements(p_payload->'actions') x
+  on conflict (id) do update
+     set subgoal_id = excluded.subgoal_id,
+         position   = excluded.position,
+         content    = excluded.content,
+         metric     = excluded.metric,
+         confirmed  = excluded.confirmed
+   where actions.plan_id = p_plan_id;
+
+  if (select count(*) from public.actions where plan_id = p_plan_id)
+     <> jsonb_array_length(p_payload->'actions') then
+    raise exception 'action ids do not all belong to plan %', p_plan_id using errcode = '22023';
+  end if;
+
+  -- Edges carry everything that describes them, so the set is replaced whole.
+  delete from public.action_dependencies where plan_id = p_plan_id;
+  insert into public.action_dependencies
+    (plan_id, action_id, depends_on_id, rationale, confidence, user_edited)
+  select p_plan_id, (x->>'actionId')::uuid, (x->>'dependsOnId')::uuid, x->>'rationale',
+         least(1, greatest(0, coalesce((x->>'confidence')::real, 0.5))),
+         coalesce((x->>'userEdited')::boolean, false)
+    from jsonb_array_elements(coalesce(p_payload->'dependencies', '[]'::jsonb)) x
+   where x->>'actionId' <> x->>'dependsOnId'
+     and exists (select 1 from public.actions a
+                  where a.plan_id = p_plan_id and a.id = (x->>'actionId')::uuid)
+     and exists (select 1 from public.actions a
+                  where a.plan_id = p_plan_id and a.id = (x->>'dependsOnId')::uuid)
+  on conflict (action_id, depends_on_id) do nothing;
+
+  return saved_at;
+end;
+$$;
+
+revoke all on function public.save_plan_content(uuid, jsonb) from public, anon;
+grant execute on function public.save_plan_content(uuid, jsonb) to authenticated, service_role;

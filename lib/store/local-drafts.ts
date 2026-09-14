@@ -38,9 +38,29 @@ function storage(): Storage | null {
   }
 }
 
-function newId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID()
-  return `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`
+/**
+ * A new cell or draft id — always a real RFC 4122 v4 uuid.
+ *
+ * Any of these may become a database row id once the plan is saved to an
+ * account. The old fallback produced strings like "dlz3k9f2a8c1b7e4", which
+ * the uuid columns reject, so a draft made where randomUUID was unavailable
+ * could never have been saved.
+ */
+export function newId(): string {
+  // Partial, and checked with typeof: the DOM types declare both methods on
+  // every Crypto, so an `in` check narrows the fallback branch to `never` —
+  // but older runtimes really do lack randomUUID.
+  const source: Partial<Crypto> | undefined = typeof crypto !== "undefined" ? crypto : undefined
+  if (typeof source?.randomUUID === "function") return source.randomUUID()
+
+  const bytes = new Uint8Array(16)
+  if (typeof source?.getRandomValues === "function") source.getRandomValues(bytes)
+  else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256)
+  bytes[6] = (bytes[6] & 0x0f) | 0x40 // version 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80 // RFC 4122 variant
+
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
 }
 
 function cell(content: string, metric: string | null = null): EditorCell {
@@ -87,19 +107,57 @@ export function loadDraft(id: string): EditorDraft | null {
   }
 }
 
-export function saveDraft(draft: EditorDraft): EditorDraft {
-  const stamped: EditorDraft = { ...draft, updatedAt: new Date().toISOString() }
+function writeDraft(draft: EditorDraft): void {
   const store = storage()
-  if (!store) return stamped
-
+  if (!store) return
   try {
-    store.setItem(DRAFT_PREFIX + stamped.id, JSON.stringify(stamped))
-    const ids = readIndex(store).filter((id) => id !== stamped.id)
-    writeIndex(store, [stamped.id, ...ids])
+    store.setItem(DRAFT_PREFIX + draft.id, JSON.stringify(draft))
+    const ids = readIndex(store).filter((id) => id !== draft.id)
+    writeIndex(store, [draft.id, ...ids])
   } catch {
     /* see above — never let a save failure take the screen down */
   }
+}
+
+/**
+ * Stores a change the user made.
+ *
+ * Marks the copy as holding something the server has not seen; a successful
+ * server save clears that through `markSynced`.
+ */
+export function saveDraft(draft: EditorDraft): EditorDraft {
+  const stamped: EditorDraft = {
+    ...draft,
+    updatedAt: new Date().toISOString(),
+    pendingSync: true,
+  }
+  writeDraft(stamped)
   return stamped
+}
+
+/**
+ * Stores a copy that came from the server, exactly as it came.
+ *
+ * Not `saveDraft`: that would restamp it and mark it unsaved, and the next
+ * open would then upload this stale copy over newer work from another device.
+ */
+export function cacheDraft(draft: EditorDraft): EditorDraft {
+  writeDraft(draft)
+  return draft
+}
+
+/**
+ * Records that the server now has the copy that was sent.
+ *
+ * Only clears the unsaved mark when nothing changed while the save was in
+ * flight — `sentUpdatedAt` is the draft's stamp at the moment it was sent. If
+ * the user kept typing, the newer edit stays marked and is sent next.
+ */
+export function markSynced(id: string, sentUpdatedAt: string, savedAt: string): boolean {
+  const current = loadDraft(id)
+  if (!current || current.updatedAt !== sentUpdatedAt) return false
+  writeDraft({ ...current, pendingSync: false, serverSyncedAt: savedAt })
+  return true
 }
 
 export function deleteDraft(id: string): void {

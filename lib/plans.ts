@@ -4,8 +4,8 @@ import { randomUUID } from "node:crypto"
 import { headers } from "next/headers"
 
 import { clientIp, fingerprint, today, verdict, type QuotaVerdict } from "./quota"
+import { draftToPayload, isUuid, rowsToDraft, type PayloadProblem } from "./plan-sync"
 import { getAdminClient, getCurrentUser, getServerClient } from "./supabase/server"
-import { isBlank, normalizeCell, normalizeContent } from "./validation"
 import {
   ANON_DAILY_LIMIT,
   DRAFT_TTL_HOURS,
@@ -192,79 +192,119 @@ export async function createPlan(
   return { ok: true, plan: { planId: data.id, draftToken } }
 }
 
+const SCHEMA_OUTDATED = new Set([
+  "PGRST202", // PostgREST: function not in the schema cache
+  "42883", // undefined_function
+  "42703", // undefined_column
+])
+
+export type SaveResult =
+  | { ok: true; savedAt: string }
+  | {
+      ok: false
+      error:
+        | "auth.required"
+        | "plan.notSynced"
+        | "plan.schemaOutdated"
+        | "plan.missing"
+        | "plan.saveFailed"
+      /** Why a draft could not be saved yet, when that is the reason. */
+      reason?: PayloadProblem
+    }
+
 /**
- * Writes a draft's subgoals and actions, replacing what is there.
+ * Saves a signed-in user's plan to their account.
  *
- * Called when the user finishes reviewing, not on every keystroke — the browser
- * copy already covers the between-steps case, and rewriting 72 rows per edit
- * would be wasteful.
+ * Replaces the previous save, which deleted every subgoal and inserted them
+ * again. The child tables cascade, so each save would have erased every
+ * action's progress and report history. `save_plan_content` keeps every row's
+ * id and writes the whole plan in one transaction — see supabase/schema.sql.
+ *
+ * Anonymous drafts are not saved here; they stay in the browser until the
+ * person signs in, and the claim page sends them then.
  */
-export async function savePlanContent(
-  planId: string,
-  draftToken: string | null,
-  draft: EditorDraft,
-): Promise<{ ok: boolean; error?: string }> {
-  const supabase = draftToken ? getAdminClient() : await getServerClient()
-  if (!supabase) return { ok: true }
+export async function savePlan(draft: EditorDraft): Promise<SaveResult> {
+  const user = await getCurrentUser()
+  if (!user) return { ok: false, error: "auth.required" }
 
-  // Ownership is proved by the token for a draft, and by RLS for an account.
-  if (draftToken) {
-    const { data } = await supabase
-      .from("plans")
-      .select("id")
-      .eq("id", planId)
-      .eq("draft_token", draftToken)
-      .maybeSingle()
-    if (!data) return { ok: false, error: "plan.notFound" }
-  }
+  // Checked on the server, which is the boundary — not only before sending.
+  const built = draftToPayload(draft)
+  if (!built.ok) return { ok: false, error: "plan.notSynced", reason: built.reason }
 
-  // The same check the Save button uses. A client that skips it — an old tab,
-  // a crafted request — must not be able to store a blank goal that still
-  // counts towards 8/8.
-  if (draft.subgoals.some((subgoal) => isBlank(subgoal.content))) {
-    return { ok: false, error: "plan.blankSubgoal" }
-  }
+  const supabase = await getServerClient()
+  if (!supabase) return { ok: false, error: "plan.saveFailed" }
 
-  await supabase.from("subgoals").delete().eq("plan_id", planId)
-
-  const { data: inserted, error: subgoalError } = await supabase
-    .from("subgoals")
-    .insert(
-      draft.subgoals.map((subgoal, position) => ({
-        plan_id: planId,
-        position,
-        content: normalizeContent(subgoal.content),
-      })),
-    )
-    .select("id, position")
-
-  if (subgoalError || !inserted) return { ok: false, error: "plan.saveFailed" }
-
-  const byPosition = new Map(inserted.map((row) => [row.position, row.id]))
-  const actions = draft.subgoals.flatMap((subgoal, position) => {
-    const rowId = byPosition.get(position)
-    if (!rowId) return []
-    return (draft.actions[subgoal.id] ?? [])
-      .filter((action) => !isBlank(action.content))
-      .map((action, index) => {
-        const clean = normalizeCell(action)
-        return {
-          plan_id: planId,
-          subgoal_id: rowId,
-          position: index,
-          content: clean.content,
-          metric: clean.metric,
-        }
-      })
+  const { data, error } = await supabase.rpc("save_plan_content", {
+    p_plan_id: draft.id,
+    p_payload: built.payload,
   })
 
-  if (actions.length > 0) {
-    const { error } = await supabase.from("actions").insert(actions)
-    if (error) return { ok: false, error: "plan.saveFailed" }
+  if (error) {
+    console.error("[plans] save_plan_content failed:", error.code, error.message)
+    // The migration has not been applied to this database yet.
+    if (SCHEMA_OUTDATED.has(error.code)) return { ok: false, error: "plan.schemaOutdated" }
+    if (error.code === "P0002") return { ok: false, error: "plan.missing" }
+    return { ok: false, error: "plan.saveFailed" }
+  }
+  return { ok: true, savedAt: String(data) }
+}
+
+export type LoadResult =
+  | { status: "loaded"; draft: EditorDraft }
+  /** No row this user can see — not theirs, never created, or deleted. */
+  | { status: "empty" }
+  | {
+      status: "unavailable"
+      reason: "not-server-plan" | "unconfigured" | "signed-out" | "schema-outdated" | "error"
+    }
+
+/**
+ * A signed-in user's plan, read from their account.
+ *
+ * Row level security does the ownership check: a plan belonging to someone else
+ * returns no row, which is reported exactly like one that does not exist.
+ */
+export async function loadPlan(planId: string): Promise<LoadResult> {
+  if (!isUuid(planId)) return { status: "unavailable", reason: "not-server-plan" }
+  if (!isSupabaseConfigured()) return { status: "unavailable", reason: "unconfigured" }
+
+  const user = await getCurrentUser()
+  if (!user) return { status: "unavailable", reason: "signed-out" }
+
+  const supabase = await getServerClient()
+  if (!supabase) return { status: "unavailable", reason: "unconfigured" }
+
+  const { data: plan, error } = await supabase
+    .from("plans")
+    .select("*")
+    .eq("id", planId)
+    .maybeSingle()
+
+  if (error) {
+    console.error("[plans] load failed:", error.code, error.message)
+    return { status: "unavailable", reason: "error" }
+  }
+  if (!plan) return { status: "empty" }
+
+  const [subgoals, actions, dependencies] = await Promise.all([
+    supabase.from("subgoals").select("*").eq("plan_id", planId),
+    supabase.from("actions").select("*").eq("plan_id", planId),
+    supabase.from("action_dependencies").select("*").eq("plan_id", planId),
+  ])
+  const failed = subgoals.error ?? actions.error ?? dependencies.error
+  if (failed) {
+    console.error("[plans] load failed:", failed.code, failed.message)
+    return { status: "unavailable", reason: "error" }
   }
 
-  await supabase.from("plans").update({ main_goal: draft.mainGoal }).eq("id", planId)
-  return { ok: true }
+  const draft = rowsToDraft({
+    plan,
+    subgoals: subgoals.data ?? [],
+    actions: actions.data ?? [],
+    dependencies: dependencies.data ?? [],
+  })
+  if (!draft) return { status: "unavailable", reason: "schema-outdated" }
+  return { status: "loaded", draft }
 }
 
 /**

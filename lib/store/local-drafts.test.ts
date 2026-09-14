@@ -120,3 +120,17 @@ describe("restoreAction", () => {
     assert.equal(restoreAction(full, removed).actions.s1.length, 8)
   })
 })
+
+describe("newId", () => {
+  it("is always a uuid, because it may become a database row id", async () => {
+    const { newId } = await import("./local-drafts.ts")
+    const shape = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+    for (let i = 0; i < 50; i++) assert.match(newId(), shape)
+  })
+
+  it("is unique across many calls", async () => {
+    const { newId } = await import("./local-drafts.ts")
+    const ids = new Set(Array.from({ length: 1000 }, () => newId()))
+    assert.equal(ids.size, 1000)
+  })
+})
