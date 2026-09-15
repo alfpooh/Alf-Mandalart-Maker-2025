@@ -532,6 +532,21 @@
         },
         "error": {
           "estimate": "기간은 1~365 사이의 정수로 입력하세요."
+        },
+        "fill": {
+          "button": "빈 칸 자동 채우기",
+          "estimating": "AI가 액션 {n}개의 기간을 추정하는 중입니다",
+          "title": "{n}개 액션의 빈 칸을 채웁니다",
+          "none": "채울 빈 칸이 없습니다. 직접 입력한 값과 완료한 액션은 바꾸지 않습니다.",
+          "aiUsed": "기간은 AI가 액션 내용을 보고 추정했습니다. 적용한 뒤에도 표에서 고칠 수 있습니다.",
+          "aiFailed": "AI 추정을 받지 못해 빈 기간을 {days}일로 채웁니다.",
+          "estimateAi": "기간 {days}일(AI)",
+          "estimateDefault": "기간 {days}일(기본값)",
+          "start": "시작 {date}",
+          "due": "마감 {date}",
+          "apply": "적용",
+          "cancel": "닫기",
+          "done": "{n}개 액션의 빈 칸을 채웠습니다"
         }
       },
       "gantt": {
@@ -1128,6 +1143,21 @@
         },
         "error": {
           "estimate": "Enter a whole number of days from 1 to 365."
+        },
+        "fill": {
+          "button": "Fill blanks automatically",
+          "estimating": "AI is estimating how long {n} actions take",
+          "title": "Filling blanks for {n} actions",
+          "none": "There are no blanks to fill. Values you typed and finished actions are never changed.",
+          "aiUsed": "Durations were estimated by AI from each action. You can still change them in the table after applying.",
+          "aiFailed": "No AI estimate came back, so blank durations are filled with {days} days.",
+          "estimateAi": "{days} days (AI)",
+          "estimateDefault": "{days} days (default)",
+          "start": "starts {date}",
+          "due": "deadline {date}",
+          "apply": "Apply",
+          "cancel": "Close",
+          "done": "Filled blanks for {n} actions"
         }
       },
       "gantt": {
@@ -1724,6 +1754,21 @@
         },
         "error": {
           "estimate": "Anna päivät kokonaislukuna 1–365."
+        },
+        "fill": {
+          "button": "Täytä tyhjät automaattisesti",
+          "estimating": "Tekoäly arvioi {n} toimenpiteen keston",
+          "title": "Täytetään {n} toimenpiteen tyhjät kohdat",
+          "none": "Täytettäviä tyhjiä kohtia ei ole. Itse syötettyjä arvoja ja valmiita toimenpiteitä ei muuteta.",
+          "aiUsed": "Tekoäly arvioi kestot toimenpiteiden perusteella. Voit muuttaa niitä taulukossa myös käyttöönoton jälkeen.",
+          "aiFailed": "Tekoälyn arviota ei saatu, joten tyhjät kestot täytetään {days} päivällä.",
+          "estimateAi": "kesto {days} pv (tekoäly)",
+          "estimateDefault": "kesto {days} pv (oletus)",
+          "start": "alku {date}",
+          "due": "määräpäivä {date}",
+          "apply": "Ota käyttöön",
+          "cancel": "Sulje",
+          "done": "{n} toimenpiteen tyhjät kohdat täytettiin"
         }
       },
       "gantt": {

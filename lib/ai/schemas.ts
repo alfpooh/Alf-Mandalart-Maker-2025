@@ -175,3 +175,28 @@ export const translationSchema = z.object({
 })
 
 export type TranslationResult = z.infer<typeof translationSchema>
+
+// ---------------------------------------------------------------------------
+// Duration estimates
+// ---------------------------------------------------------------------------
+
+/**
+ * Days per action, by position in the list sent.
+ *
+ * No range in the schema: a 400 would fail the whole call, while clamping it
+ * to 365 when mapping back loses nothing. Out-of-range or repeated positions
+ * are dropped there too, and a missing one falls back to the default — every
+ * number is shown to the person before it is saved.
+ */
+export const estimatesSchema = z.object({
+  estimates: z
+    .array(
+      z.object({
+        index: z.number().int().describe("Index of the action, as listed"),
+        days: z.number().int().describe("Whole days from starting the action to finishing it, 1 to 365"),
+      }),
+    )
+    .max(80),
+})
+
+export type EstimatesResult = z.infer<typeof estimatesSchema>

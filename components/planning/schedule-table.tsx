@@ -1,11 +1,15 @@
 "use client"
 
 import { useMemo, useState, type FocusEvent, type KeyboardEvent } from "react"
-import { CalendarClock } from "lucide-react"
+import { CalendarClock, Loader2, Sparkles } from "lucide-react"
 
 import { formatDay } from "@/components/planning/todo-row"
+import { QueueNotice } from "@/components/queue-notice"
+import { DEFAULT_ESTIMATE_DAYS, autoFill, needsEstimate } from "@/lib/auto-fill"
 import { useLanguage } from "@/lib/language-context"
-import type { PlanSchedule } from "@/lib/plan-schedule"
+import { suggestEstimates, type PlanSchedule } from "@/lib/plan-schedule"
+import { settled } from "@/lib/settle"
+import { newTicket } from "@/lib/ticket"
 import {
   ATTENTION_ISSUES,
   SCHEDULE_MODES,
@@ -26,6 +30,8 @@ const FOCUS =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900"
 
 type Filter = "all" | "unscheduled" | "issues"
+/** Filling blanks: waiting on the model, then a preview of what would be saved. */
+type Fill = { status: "estimating"; ticket: string } | { status: "ready"; estimates: Map<string, number>; aiFailed: boolean }
 
 interface ScheduleTableProps {
   schedule: PlanSchedule
@@ -64,6 +70,7 @@ export function ScheduleTable({
   const { t, language } = useLanguage()
   const [filter, setFilter] = useState<Filter>("all")
   const [previewing, setPreviewing] = useState(false)
+  const [fill, setFill] = useState<Fill | null>(null)
 
   const byId = useMemo(() => new Map(schedule.actions.map((a) => [a.id, a])), [schedule])
   const issuesOf = useMemo(
@@ -71,6 +78,14 @@ export function ScheduleTable({
     [schedule, entries],
   )
   const pending = useMemo(() => scheduleChanges(schedule.actions, entries), [schedule, entries])
+  // Worked out from the plan as it is now, so an edit made while the preview is open is respected.
+  const filled = useMemo(
+    () =>
+      fill?.status === "ready"
+        ? autoFill(schedule.actions, schedule.dependencies, fill.estimates, { mode: schedule.scheduleMode, today })
+        : null,
+    [fill, schedule, today],
+  )
 
   const matches = (action: PlannedAction, which: Filter) => {
     const issues = issuesOf.get(action.id) ?? []
@@ -137,6 +152,35 @@ export function ScheduleTable({
     if (saved) setPreviewing(false)
   }
 
+  const startFill = async () => {
+    setPreviewing(false)
+    if (needsEstimate(schedule.actions).length === 0) {
+      // Only dates to fill: no reason to ask the model anything.
+      setFill({ status: "ready", estimates: new Map(), aiFailed: false })
+      return
+    }
+    const ticket = newTicket()
+    setFill({ status: "estimating", ticket })
+    const result = await settled(suggestEstimates(schedule.planId, ticket))
+    const estimates = "estimates" in result ? new Map(Object.entries(result.estimates)) : null
+    // Closed, or started again, while waiting: this answer is no longer wanted.
+    setFill((current) =>
+      current?.status === "estimating" && current.ticket === ticket
+        ? { status: "ready", estimates: estimates ?? new Map(), aiFailed: estimates === null }
+        : current,
+    )
+  }
+
+  const applyFill = async () => {
+    if (!filled || filled.changes.length === 0) return
+    const undo = filled.changes.flatMap((change) => {
+      const action = byId.get(change.id)
+      return action ? [undoFor(action, change)] : []
+    })
+    const saved = await onApply(filled.changes, t("planning.schedule.fill.done", { n: filled.changes.length }), undo)
+    if (saved) setFill(null)
+  }
+
   const input = `h-9 w-full min-w-0 rounded-md border border-gray-300 bg-white px-2 text-sm tabular-nums disabled:bg-gray-50 disabled:text-gray-500 ${FOCUS}`
 
   return (
@@ -181,7 +225,21 @@ export function ScheduleTable({
           </label>
           <button
             type="button"
-            onClick={() => setPreviewing((open) => !open)}
+            onClick={() => void startFill()}
+            disabled={saving || fill?.status === "estimating"}
+            aria-expanded={fill !== null}
+            aria-controls="auto-fill"
+            className={`inline-flex min-h-[40px] items-center justify-center gap-2 rounded-md border border-violet-300 bg-white px-4 text-sm font-semibold text-violet-900 hover:bg-violet-50 disabled:opacity-60 ${FOCUS}`}
+          >
+            <Sparkles className="h-4 w-4" aria-hidden="true" />
+            {t("planning.schedule.fill.button")}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFill(null)
+              setPreviewing((open) => !open)
+            }}
             aria-expanded={previewing}
             aria-controls="automatic-schedule"
             className={`inline-flex min-h-[40px] items-center justify-center gap-2 rounded-md bg-gray-900 px-4 text-sm font-semibold text-white hover:bg-gray-800 ${FOCUS}`}
@@ -231,6 +289,85 @@ export function ScheduleTable({
               {t("planning.schedule.auto.cancel")}
             </button>
           </div>
+        </div>
+      )}
+
+      {fill && (
+        <div id="auto-fill" className="mt-4 rounded-lg border border-violet-200 bg-violet-50 p-4">
+          {fill.status === "estimating" ? (
+            <div className="grid gap-3">
+              <p role="status" className="flex items-center gap-2 font-semibold text-violet-950">
+                <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+                {t("planning.schedule.fill.estimating", { n: needsEstimate(schedule.actions).length })}
+              </p>
+              <QueueNotice ticketId={fill.ticket} />
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setFill(null)}
+                  className={`min-h-[40px] rounded-md border border-violet-300 bg-white px-4 text-sm font-medium text-violet-900 hover:bg-violet-100 ${FOCUS}`}
+                >
+                  {t("planning.schedule.fill.cancel")}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <h3 className="font-semibold text-violet-950">
+                {filled && filled.changes.length > 0
+                  ? t("planning.schedule.fill.title", { n: filled.changes.length })
+                  : t("planning.schedule.fill.none")}
+              </h3>
+              {filled?.rows.some((row) => row.estimate) && (
+                <p className="mt-1 text-sm text-violet-950">
+                  {fill.aiFailed
+                    ? t("planning.schedule.fill.aiFailed", { days: DEFAULT_ESTIMATE_DAYS })
+                    : t("planning.schedule.fill.aiUsed")}
+                </p>
+              )}
+              {filled && filled.rows.length > 0 && (
+                <ul className="mt-2 max-h-72 divide-y divide-violet-100 overflow-y-auto text-sm text-violet-950">
+                  {filled.rows.map((row) => (
+                    <li key={row.id} className="py-1.5">
+                      <span className="font-medium">{names.get(row.id) ?? "—"}</span>
+                      <span className="text-violet-900">
+                        {" — "}
+                        {[
+                          row.estimate &&
+                            t(row.estimate.source === "ai" ? "planning.schedule.fill.estimateAi" : "planning.schedule.fill.estimateDefault", {
+                              days: row.estimate.days,
+                            }),
+                          row.startDate && t("planning.schedule.fill.start", { date: day(row.startDate) }),
+                          row.dueDate && t("planning.schedule.fill.due", { date: day(row.dueDate) }),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {filled && filled.changes.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => void applyFill()}
+                    disabled={saving}
+                    className={`min-h-[40px] rounded-md bg-violet-800 px-4 text-sm font-semibold text-white hover:bg-violet-900 disabled:opacity-60 ${FOCUS}`}
+                  >
+                    {t("planning.schedule.fill.apply")}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setFill(null)}
+                  className={`min-h-[40px] rounded-md border border-violet-300 bg-white px-4 text-sm font-medium text-violet-900 hover:bg-violet-100 ${FOCUS}`}
+                >
+                  {t("planning.schedule.fill.cancel")}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 

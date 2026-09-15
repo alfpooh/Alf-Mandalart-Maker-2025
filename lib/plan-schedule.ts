@@ -14,6 +14,10 @@
  * as the viewer's own.
  */
 
+import { estimatesPrompt } from "./ai/prompts"
+import { run } from "./ai/run"
+import { estimatesSchema } from "./ai/schemas"
+import { estimatesFromModel } from "./auto-fill"
 import { isUuid } from "./plan-sync"
 import {
   SCHEDULE_MODES,
@@ -329,4 +333,54 @@ export async function removePrerequisite(planId: string, actionId: string, depen
   ])
   if (error) return failed("remove prerequisite", error)
   return { ok: true, savedAt }
+}
+
+// ---------------------------------------------------------------------------
+// Filling blanks (schedule tab)
+// ---------------------------------------------------------------------------
+
+export type EstimatesSuggestion = { ok: true; estimates: Record<string, number> } | { ok: false; error: string }
+
+/**
+ * Suggested day counts for the plan's unfinished actions with no estimate.
+ *
+ * The action text comes from the database, not the browser, so this can only
+ * ever describe the signed-in person's own plan. Nothing is written: the
+ * schedule tab shows the numbers and saves them when the person applies them.
+ */
+export async function suggestEstimates(planId: string, ticketId: string): Promise<EstimatesSuggestion> {
+  if (!isUuid(planId) || typeof ticketId !== "string" || ticketId.length === 0 || ticketId.length > 64) {
+    return { ok: false, error: "schedule.error.invalid" }
+  }
+  const ctx = await signedIn()
+  if (!ctx) return { ok: false, error: "auth.required" }
+  const { supabase, user } = ctx
+
+  const [plan, subgoals, actions] = await Promise.all([
+    supabase.from("plans").select("main_goal, schedule_mode").eq("id", planId).eq("owner_id", user.id).maybeSingle(),
+    supabase.from("subgoals").select("id, position, content").eq("plan_id", planId),
+    supabase.from("actions").select("id, subgoal_id, position, content, progress, estimate_days").eq("plan_id", planId),
+  ])
+  const error = plan.error ?? subgoals.error ?? actions.error
+  if (error) return failed("estimates", error)
+  if (!plan.data) return { ok: false, error: "plan.missing" }
+
+  const areas = new Map((subgoals.data ?? []).map((s) => [s.id, s]))
+  const blank = (actions.data ?? [])
+    .filter((a) => areas.has(a.subgoal_id) && a.estimate_days === null && a.progress !== 100 && (a.content ?? "").trim() !== "")
+    .sort((a, b) => areas.get(a.subgoal_id)!.position - areas.get(b.subgoal_id)!.position || a.position - b.position)
+  if (blank.length === 0) return { ok: true, estimates: {} }
+
+  const result = await run(
+    "estimates",
+    estimatesSchema,
+    estimatesPrompt(
+      plan.data.main_goal,
+      blank.map((a) => ({ area: areas.get(a.subgoal_id)!.content, content: a.content })),
+      plan.data.schedule_mode === "workdays" ? "workdays" : "calendar",
+    ),
+    ticketId,
+  )
+  if (!result.ok) return result
+  return { ok: true, estimates: Object.fromEntries(estimatesFromModel(result.data.estimates, blank.map((a) => a.id))) }
 }

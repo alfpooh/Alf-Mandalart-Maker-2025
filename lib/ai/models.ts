@@ -29,6 +29,7 @@ export type AiTask =
   | "progress"
   | "review"
   | "translate"
+  | "estimates"
 
 export const AI_TASKS: AiTask[] = [
   "subgoals",
@@ -38,6 +39,7 @@ export const AI_TASKS: AiTask[] = [
   "progress",
   "review",
   "translate",
+  "estimates",
 ]
 
 type ProviderId = "google" | "groq"
@@ -82,6 +84,8 @@ const TASK_DEFAULTS: Record<ProviderId, Record<AiTask, string>> = {
     // Translation is faithful rewriting, not judgement — flash does it well
     // and a plan is ~137 strings in one call.
     translate: "gemini-flash-latest",
+    // Rough day counts a person reviews before saving: shape-following, not judgement.
+    estimates: "gemini-flash-latest",
   },
   // Kept working so the provider can be switched back with one env var.
   // Of what Groq still serves, only the gpt-oss family accepts
@@ -95,6 +99,7 @@ const TASK_DEFAULTS: Record<ProviderId, Record<AiTask, string>> = {
     progress: "openai/gpt-oss-20b",
     review: "openai/gpt-oss-120b",
     translate: "openai/gpt-oss-20b",
+    estimates: "openai/gpt-oss-20b",
   },
 }
 
@@ -139,6 +144,8 @@ export const TASK_TIMEOUT_MS: Record<AiTask, number> = {
   review: 90_000,
   // A whole plan in one request, so it gets the longest window.
   translate: 120_000,
+  // Up to 64 actions in one request.
+  estimates: 90_000,
 }
 
 /**
@@ -164,6 +171,7 @@ const TASK_REASONING: Record<AiTask, "low" | "medium" | "high"> = {
   progress: "low",
   review: "medium",
   translate: "low",
+  estimates: "low",
 }
 
 /**

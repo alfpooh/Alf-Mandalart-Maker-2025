@@ -206,3 +206,36 @@ Rules:
 Lines:
 ${numbered}`
 }
+
+/**
+ * How long each action takes, for filling blank estimates in the schedule.
+ *
+ * The whole plan in one list, with each action's area beside it, because an
+ * action's size often only makes sense next to its goal. Nothing here is
+ * saved without the person seeing the numbers first.
+ */
+export function estimatesPrompt(
+  mainGoal: string,
+  actions: { area: string; content: string }[],
+  mode: "calendar" | "workdays",
+): string {
+  const unit = mode === "workdays" ? "working days (Monday to Friday only)" : "calendar days"
+  return `${METHOD}
+
+Central goal: "${mainGoal}"
+
+Actions, by index, each with its area in brackets:
+${actions.map((a, i) => `${i}. [${a.area}] ${a.content}`).join("\n")}
+
+Estimate how long each action takes from the day it starts to the day it is
+done, in ${unit}, as a whole number from 1 to 365.
+
+Assume one person doing this alongside ordinary work and life, not full time.
+- When the action states its own span ("for 2 weeks", "30 days"), use that span.
+- A one-off errand (buy, sign up, book, write down) is usually 1 to 3 days.
+- A habit or repeated practice with no stated end: the time it takes to
+  establish it, usually 14 to 30 days.
+- A skill or project: the time to reach what the action describes.
+
+Return exactly one estimate for every index from 0 to ${actions.length - 1}.`
+}
