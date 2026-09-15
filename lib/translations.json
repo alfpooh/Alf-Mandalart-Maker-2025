@@ -398,6 +398,83 @@
         "saved": "{n}개를 계정에 저장했습니다",
         "partial": "{failed}개는 저장하지 못했습니다. 이 브라우저에는 그대로 있습니다."
       }
+    },
+    "schedule": {
+      "error": {
+        "failed": "저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        "invalid": "저장할 수 없는 값입니다. 입력을 확인해 주세요.",
+        "cycle": "선후관계가 순환하게 되어 추가할 수 없습니다. 이 액션은 이미 그 액션보다 먼저 해야 합니다."
+      }
+    },
+    "planning": {
+      "title": "실행 계획",
+      "open": "실행 계획",
+      "back": "만다라트로",
+      "loadFailed": "계획을 불러오지 못했습니다. 새로고침해 주세요.",
+      "summary": {
+        "now": "지금 가능",
+        "waiting": "대기 중",
+        "done": "완료"
+      },
+      "views": {
+        "label": "보기",
+        "today": "오늘",
+        "week": "이번 주",
+        "waiting": "대기 중",
+        "done": "완료"
+      },
+      "filters": {
+        "area": "영역",
+        "allAreas": "모든 영역",
+        "due": "마감",
+        "anyDue": "전체",
+        "hasDue": "마감 있음",
+        "overdue": "마감 지남"
+      },
+      "item": {
+        "complete": "{action} 완료로 표시",
+        "markOpen": "{action} 완료 취소",
+        "drag": "{action} 순서 옮기기",
+        "area": "영역 {n}",
+        "due": "마감 {date}",
+        "waitingOn": "기다리는 중: {names}"
+      },
+      "reason": {
+        "unlocks": "끝내면 {count}개 시작 가능",
+        "overdue": "마감 {days}일 지남",
+        "dueToday": "오늘 마감",
+        "dueSoon": "마감 {days}일 남음",
+        "behindArea": "뒤처진 영역"
+      },
+      "prereq": {
+        "title": "선행 액션",
+        "none": "선행 액션이 없습니다.",
+        "choose": "먼저 끝나야 하는 액션 선택",
+        "save": "추가",
+        "remove": "선행 액션 {name} 제거"
+      },
+      "empty": {
+        "today": "오늘 시작할 수 있는 일이 없습니다. '이번 주'나 '대기 중'을 확인해 보세요.",
+        "week": "이번 주에 시작하거나 마감되는 일이 없습니다.",
+        "waiting": "기다리는 일이 없습니다.",
+        "done": "아직 끝낸 일이 없습니다."
+      },
+      "done": {
+        "completed": "'{action}' 완료",
+        "reopened": "완료를 취소했습니다",
+        "reordered": "순서를 저장했습니다",
+        "prereqAdded": "선행 액션을 추가했습니다",
+        "prereqRemoved": "선행 액션을 제거했습니다",
+        "undo": "되돌리기",
+        "undone": "되돌렸습니다"
+      },
+      "dnd": {
+        "instructions": "Space나 Enter로 들고, 화살표로 옮기고, 다시 Space나 Enter로 놓습니다. Esc는 취소입니다.",
+        "start": "{action}을(를) 들었습니다. 현재 {position}번째입니다.",
+        "over": "{position}번째 위치로 옮기는 중입니다.",
+        "end": "{action}을(를) {position}번째에 놓았습니다.",
+        "cancel": "취소했습니다. {action}은(는) 원래 자리에 있습니다."
+      }
     }
   },
   "en": {
@@ -799,6 +876,83 @@
         "saved": "Saved {n} to your account",
         "partial": "{failed} couldn't be saved. They're still in this browser."
       }
+    },
+    "schedule": {
+      "error": {
+        "failed": "That wasn't saved. Try again in a moment.",
+        "invalid": "That value can't be saved. Check what you entered.",
+        "cycle": "That would make the prerequisites go in a circle: this action already has to come before that one."
+      }
+    },
+    "planning": {
+      "title": "Action plan",
+      "open": "Plan the work",
+      "back": "Back to the Mandalart",
+      "loadFailed": "Couldn't load the plan. Refresh the page to try again.",
+      "summary": {
+        "now": "Ready now",
+        "waiting": "Waiting",
+        "done": "Done"
+      },
+      "views": {
+        "label": "View",
+        "today": "Today",
+        "week": "This week",
+        "waiting": "Waiting",
+        "done": "Done"
+      },
+      "filters": {
+        "area": "Area",
+        "allAreas": "All areas",
+        "due": "Deadline",
+        "anyDue": "Any",
+        "hasDue": "Has a deadline",
+        "overdue": "Overdue"
+      },
+      "item": {
+        "complete": "Mark {action} done",
+        "markOpen": "Mark {action} not done",
+        "drag": "Move {action}",
+        "area": "Area {n}",
+        "due": "Due {date}",
+        "waitingOn": "Waiting on: {names}"
+      },
+      "reason": {
+        "unlocks": "Frees {count} to start",
+        "overdue": "{days} days overdue",
+        "dueToday": "Due today",
+        "dueSoon": "Due in {days} days",
+        "behindArea": "Area is behind"
+      },
+      "prereq": {
+        "title": "Prerequisites",
+        "none": "No prerequisites.",
+        "choose": "Choose an action that has to finish first",
+        "save": "Add",
+        "remove": "Remove prerequisite {name}"
+      },
+      "empty": {
+        "today": "Nothing can start today. Check This week or Waiting.",
+        "week": "Nothing starts or is due this week.",
+        "waiting": "Nothing is waiting.",
+        "done": "Nothing is done yet."
+      },
+      "done": {
+        "completed": "Done: {action}",
+        "reopened": "Marked not done",
+        "reordered": "Order saved",
+        "prereqAdded": "Prerequisite added",
+        "prereqRemoved": "Prerequisite removed",
+        "undo": "Undo",
+        "undone": "Undone"
+      },
+      "dnd": {
+        "instructions": "Press Space or Enter to pick up, arrow keys to move, Space or Enter to drop. Escape cancels.",
+        "start": "Picked up {action}. Position {position}.",
+        "over": "Moving to position {position}.",
+        "end": "Dropped {action} at position {position}.",
+        "cancel": "Cancelled. {action} is back where it was."
+      }
     }
   },
   "fi": {
@@ -1199,6 +1353,83 @@
         "saving": "Tallennetaan…",
         "saved": "Tallennettu tilille: {n}",
         "partial": "{failed} ei voitu tallentaa. Ne ovat yhä tässä selaimessa."
+      }
+    },
+    "schedule": {
+      "error": {
+        "failed": "Tallennus epäonnistui. Yritä hetken kuluttua uudelleen.",
+        "invalid": "Arvoa ei voi tallentaa. Tarkista syöte.",
+        "cycle": "Edeltävyydet muodostaisivat kehän: tämän toimenpiteen on jo tultava ennen tuota."
+      }
+    },
+    "planning": {
+      "title": "Toimintasuunnitelma",
+      "open": "Suunnittele työ",
+      "back": "Takaisin mandalartiin",
+      "loadFailed": "Suunnitelman lataus epäonnistui. Päivitä sivu.",
+      "summary": {
+        "now": "Aloitettavissa",
+        "waiting": "Odottaa",
+        "done": "Valmiit"
+      },
+      "views": {
+        "label": "Näkymä",
+        "today": "Tänään",
+        "week": "Tällä viikolla",
+        "waiting": "Odottaa",
+        "done": "Valmiit"
+      },
+      "filters": {
+        "area": "Alue",
+        "allAreas": "Kaikki alueet",
+        "due": "Määräaika",
+        "anyDue": "Kaikki",
+        "hasDue": "On määräaika",
+        "overdue": "Myöhässä"
+      },
+      "item": {
+        "complete": "Merkitse valmiiksi: {action}",
+        "markOpen": "Merkitse keskeneräiseksi: {action}",
+        "drag": "Siirrä: {action}",
+        "area": "Alue {n}",
+        "due": "Määräaika {date}",
+        "waitingOn": "Odottaa: {names}"
+      },
+      "reason": {
+        "unlocks": "Vapauttaa {count} aloitettavaksi",
+        "overdue": "{days} päivää myöhässä",
+        "dueToday": "Erääntyy tänään",
+        "dueSoon": "Erääntyy {days} päivän päästä",
+        "behindArea": "Alue on jäljessä"
+      },
+      "prereq": {
+        "title": "Edeltävät",
+        "none": "Ei edeltäviä toimenpiteitä.",
+        "choose": "Valitse toimenpide, jonka on valmistuttava ensin",
+        "save": "Lisää",
+        "remove": "Poista edeltävä: {name}"
+      },
+      "empty": {
+        "today": "Tänään ei voi aloittaa mitään. Katso Tällä viikolla tai Odottaa.",
+        "week": "Tällä viikolla ei ala tai eräänny mitään.",
+        "waiting": "Mikään ei odota.",
+        "done": "Mitään ei ole vielä valmiina."
+      },
+      "done": {
+        "completed": "Valmis: {action}",
+        "reopened": "Merkitty keskeneräiseksi",
+        "reordered": "Järjestys tallennettu",
+        "prereqAdded": "Edeltävä lisätty",
+        "prereqRemoved": "Edeltävä poistettu",
+        "undo": "Kumoa",
+        "undone": "Kumottu"
+      },
+      "dnd": {
+        "instructions": "Nosta välilyönnillä tai Enterillä, siirrä nuolinäppäimillä ja pudota välilyönnillä tai Enterillä. Esc peruuttaa.",
+        "start": "Nostettu: {action}. Paikka {position}.",
+        "over": "Siirretään paikkaan {position}.",
+        "end": "Pudotettu: {action} paikkaan {position}.",
+        "cancel": "Peruttu. {action} on alkuperäisellä paikallaan."
       }
     }
   }

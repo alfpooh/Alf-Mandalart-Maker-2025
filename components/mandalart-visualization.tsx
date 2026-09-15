@@ -37,6 +37,8 @@ interface MandalartVisualizationProps {
   /** True for visitors without an account: exports are account-only. */
   locked?: boolean
   onShowTeaser?: () => void
+  /** Opens the planning screen. Absent when planning is unavailable (no account). */
+  onOpenPlanning?: () => void
 }
 
 interface CellData {
@@ -59,6 +61,7 @@ export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({
   onRemoveDependency,
   locked = false,
   onShowTeaser,
+  onOpenPlanning,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCell, setEditingCell] = useState<CellData | null>(null)
@@ -271,6 +274,12 @@ export const MandalartVisualization: React.FC<MandalartVisualizationProps> = ({
               <Button onClick={onBack} variant="outline">
                 {t("visualization.back")}
               </Button>
+
+              {onOpenPlanning && (
+                <Button onClick={onOpenPlanning} className="font-semibold">
+                  {t("planning.open")}
+                </Button>
+              )}
 
               {locked ? (
                 // Downloads are an account feature. Rather than hiding them,

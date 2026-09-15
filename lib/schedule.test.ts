@@ -251,6 +251,16 @@ describe("buildTodo", () => {
     assert.deepEqual(items[2].reasons, [{ kind: "behindArea", area: 2 }])
     assert.equal(items[0].reasons.length, 0)
   })
+
+  it("says nothing about areas while the whole plan has barely started", () => {
+    // Plan average 12.5%: every untouched area is 12.5 points behind, which means nothing yet.
+    const items = buildTodo(
+      [action(1, { area: 1, progress: 50 }), action(2, { area: 2 }), action(3, { area: 3 }), action(4, { area: 4 })],
+      [],
+      TODAY,
+    )
+    assert.equal(items.some((i) => i.reasons.some((r) => r.kind === "behindArea")), false)
+  })
 })
 
 describe("orderTodo", () => {
@@ -285,6 +295,14 @@ describe("inView", () => {
 
   it("shows this week what starts or is due within seven days", () => {
     assert.deepEqual(view("week"), [1, 2, 4, 6])
+  })
+
+  it("counts everything that can be done today as this week's work too, even without dates", () => {
+    const undated = [action(7, { estimateDays: null })]
+    const todo = buildTodo(undated, [], TODAY)
+    const pass = forwardPass(undated, [], { mode: "calendar", today: TODAY })
+    assert.equal(inView(todo[0], "today", TODAY, pass), true)
+    assert.equal(inView(todo[0], "week", TODAY, pass), true)
   })
 
   it("keeps waiting and done apart", () => {

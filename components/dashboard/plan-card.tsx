@@ -71,7 +71,8 @@ export function PlanCard({ plan, selected, onSelect, onTogglePin, onManage }: Pl
 
           <h2 className="mt-2 text-base font-semibold leading-snug text-gray-900">
             <Link
-              href={`/plan/${plan.id}`}
+              // A finished Mandalart opens on its planning screen (FR-8.9).
+              href={plan.drafting ? `/plan/${plan.id}` : `/plan/${plan.id}/schedule`}
               className={`line-clamp-2 break-words rounded-sm hover:underline ${FOCUS}`}
             >
               {plan.mainGoal}

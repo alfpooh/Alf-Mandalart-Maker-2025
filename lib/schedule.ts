@@ -250,6 +250,11 @@ export interface TodoItem {
 export const DUE_SOON_DAYS = 7
 /** How far below the plan's average an area has to fall to be "behind". */
 export const BEHIND_MARGIN = 10
+/**
+ * Below this average the whole plan has barely started, and every untouched
+ * area would read as "behind" — a signal on nearly every card is no signal.
+ */
+export const BEHIND_MIN_PLAN_AVERAGE = 20
 
 /**
  * Every action as a to-do item, with a group and a score.
@@ -314,7 +319,7 @@ export function buildTodo(
       }
     }
     const area = areaTotals.get(action.area)!
-    if (area.sum / area.count < planAverage - BEHIND_MARGIN) {
+    if (planAverage >= BEHIND_MIN_PLAN_AVERAGE && area.sum / area.count < planAverage - BEHIND_MARGIN) {
       reasons.push({ kind: "behindArea", area: action.area })
       score += 4
     }
@@ -372,6 +377,8 @@ export function inView(
       )
     case "week": {
       if (item.group === "done") return false
+      // This week includes today: anything that can be done today is also this week's work.
+      if (inView(item, "today", today, entries)) return true
       const weekEnd = shiftDays(today, 6)
       return (slot !== null && slot.start <= weekEnd) || (item.action.dueDate !== null && item.action.dueDate <= weekEnd)
     }
@@ -391,6 +398,47 @@ export function rankChanges(
   return orderedIds.flatMap((id, index) => {
     const action = byId.get(id)
     return action && action.todoRank !== index + 1 ? [{ id, todoRank: index + 1 }] : []
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Reordering and changes shown before they are saved
+// ---------------------------------------------------------------------------
+
+/**
+ * The whole list after a visible part of it was rearranged.
+ *
+ * A filtered view shows only some actions. Dragging among those must not move
+ * the hidden ones, so each visible action takes the next slot a visible action
+ * held, and every hidden action keeps its place.
+ */
+export function mergeOrder(fullIds: string[], visibleInNewOrder: string[]): string[] {
+  const visible = new Set(visibleInNewOrder)
+  let next = 0
+  return fullIds.map((id) => (visible.has(id) && next < visibleInNewOrder.length ? visibleInNewOrder[next++] : id))
+}
+
+/**
+ * The actions as they will be once `changes` are saved — what the screen shows
+ * while the save is in flight. Mirrors update_plan_actions: an absent key is
+ * left alone, and completion time follows progress.
+ */
+export function applyChanges(actions: PlannedAction[], changes: ActionChange[], now: string): PlannedAction[] {
+  const byId = new Map(changes.map((change) => [change.id, change]))
+  return actions.map((action) => {
+    const change = byId.get(action.id)
+    if (!change) return action
+    const next: PlannedAction = { ...action }
+    if ("startDate" in change) next.startDate = change.startDate ?? null
+    if ("estimateDays" in change) next.estimateDays = change.estimateDays ?? null
+    if ("dueDate" in change) next.dueDate = change.dueDate ?? null
+    if ("dateLocked" in change) next.dateLocked = change.dateLocked === true
+    if ("todoRank" in change) next.todoRank = change.todoRank ?? null
+    if (change.progress !== undefined) {
+      next.progress = change.progress
+      next.completedAt = change.progress === 100 ? (action.progress === 100 ? action.completedAt : now) : null
+    }
+    return next
   })
 }
 

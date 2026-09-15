@@ -482,6 +482,16 @@ export function PlanEditor({
           update((d) => removeDependency(d, actionId, dependsOnId))
         }
         onShowTeaser={() => setShowTeaser(true)}
+        onOpenPlanning={
+          session.signedIn
+            ? async () => {
+                // The planning screen reads the account's copy; send any
+                // unsaved edit first so it is not missing there.
+                await sync.flush()
+                router.push(`/plan/${draft.id}/schedule`)
+              }
+            : undefined
+        }
       />
     )
   }

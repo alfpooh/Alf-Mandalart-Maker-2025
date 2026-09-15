@@ -252,16 +252,16 @@ async function planEdges(
   planId: string,
   actionIds: string[],
 ): Promise<{ ok: true; edges: ActionDependency[] } | { ok: false; error: string }> {
-  const plan = await ctx.supabase.from("plans").select("id").eq("id", planId).eq("owner_id", ctx.user.id).maybeSingle()
-  if (plan.error) return failed("prerequisite", plan.error)
-  if (!plan.data) return { ok: false, error: "plan.missing" }
-
-  const [actions, edges] = await Promise.all([
+  // One round trip, not three: a prerequisite click waited on each in turn.
+  const [plan, actions, edges] = await Promise.all([
+    ctx.supabase.from("plans").select("id").eq("id", planId).eq("owner_id", ctx.user.id).maybeSingle(),
     ctx.supabase.from("actions").select("id").eq("plan_id", planId).in("id", actionIds),
     ctx.supabase.from("action_dependencies").select("action_id, depends_on_id").eq("plan_id", planId),
   ])
-  const error = actions.error ?? edges.error
+  const error = plan.error ?? actions.error ?? edges.error
   if (error) return failed("prerequisite", error)
+  // Row level security hides another person's rows, so their plan reads as absent here.
+  if (!plan.data) return { ok: false, error: "plan.missing" }
   if ((actions.data?.length ?? 0) !== new Set(actionIds).size) return { ok: false, error: "plan.missing" }
 
   return {
@@ -291,20 +291,21 @@ export async function addPrerequisite(planId: string, actionId: string, dependsO
   if (!loaded.ok) return loaded
   if (wouldCreateCycle(loaded.edges, actionId, dependsOnId)) return { ok: false, error: "schedule.error.cycle" }
 
-  const { error } = await ctx.supabase.from("action_dependencies").insert({
-    plan_id: planId,
-    action_id: actionId,
-    depends_on_id: dependsOnId,
-    rationale: null,
-    confidence: 1,
-    // A person drew this edge; re-analysis must not drop it.
-    user_edited: true,
-  })
+  const savedAt = now()
+  const [{ error }] = await Promise.all([
+    ctx.supabase.from("action_dependencies").insert({
+      plan_id: planId,
+      action_id: actionId,
+      depends_on_id: dependsOnId,
+      rationale: null,
+      confidence: 1,
+      // A person drew this edge; re-analysis must not drop it.
+      user_edited: true,
+    }),
+    touchPlan(ctx, planId, savedAt),
+  ])
   // Already there is the outcome that was asked for.
   if (error && error.code !== "23505") return failed("add prerequisite", error)
-
-  const savedAt = now()
-  await touchPlan(ctx, planId, savedAt)
   return { ok: true, savedAt }
 }
 
@@ -316,15 +317,16 @@ export async function removePrerequisite(planId: string, actionId: string, depen
   const loaded = await planEdges(ctx, planId, [actionId, dependsOnId])
   if (!loaded.ok) return loaded
 
-  const { error } = await ctx.supabase
-    .from("action_dependencies")
-    .delete()
-    .eq("plan_id", planId)
-    .eq("action_id", actionId)
-    .eq("depends_on_id", dependsOnId)
-  if (error) return failed("remove prerequisite", error)
-
   const savedAt = now()
-  await touchPlan(ctx, planId, savedAt)
+  const [{ error }] = await Promise.all([
+    ctx.supabase
+      .from("action_dependencies")
+      .delete()
+      .eq("plan_id", planId)
+      .eq("action_id", actionId)
+      .eq("depends_on_id", dependsOnId),
+    touchPlan(ctx, planId, savedAt),
+  ])
+  if (error) return failed("remove prerequisite", error)
   return { ok: true, savedAt }
 }
