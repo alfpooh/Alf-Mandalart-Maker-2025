@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| 상태 | v2.3 — 0·1단계 배포, 2단계(라이브러리 스파이크) 완료, D9 결정 대기 |
+| 상태 | v2.4 — 0·1·2단계 완료. D9 결정(DHTMLX Community). 3단계는 D1 결정 대기 |
 | 작성 | 2026-09-13 · 개정 2026-09-14 |
 | 대상 | **로그인 사용자** (복수의 만다라트 보유 가능) |
 | 관련 | `supabase/schema.sql`, `lib/plans.ts`, `lib/graph.ts`, `lib/actions.ts`, `components/execution-order.tsx`, `components/recent-drafts.tsx` |
@@ -16,6 +16,7 @@
 | v2.1 (09-14) | D8 결정: `plans.status`에 `completed` 추가(명시적 완료). 0·1·2단계 착수 승인 |
 | v2.2 (09-14) | 0단계(ID 유지 저장) 배포. 1단계 대시보드 구현 — §6.8 끝의 구현 메모에 PRD와 달라진 점 정리 |
 | v2.3 (09-15) | 1단계 배포. 2단계 스파이크 완료 — `docs/spike-gantt-libraries.md`. D9 권장안(DHTMLX Community) 제시, 결정 대기 |
+| v2.4 (09-15) | **D9 결정: DHTMLX Gantt Community(MIT) 채택.** D1은 계속 보류 |
 
 ---
 
@@ -289,8 +290,8 @@ plan                                  plan
 
 | 라이브러리 | 라이선스 | React peer | 최근 수정 | 드래그 | 의존성 | 자동 스케줄링 | 판단 |
 |---|---|---|---|---|---|---|---|
-| `@svar-ui/react-gantt` | MIT (코어) | ≥18, README에 React 19 명시 | 2026-09 | ✅ | ✅ | ❌ PRO | **후보 1** — 순수 React 컴포넌트 |
-| `dhtmlx-gantt` v10 Community | **MIT** | 없음(바닐라) | 2026-09 | ✅ 이동·기간 | ✅ 4종·끌어서 연결 | ❌ PRO | **후보 2** — 키보드 탐색 플러그인 있음, React 래퍼 필요 |
+| `@svar-ui/react-gantt` | MIT (코어) | ≥18, README에 React 19 명시 | 2026-09 | ✅ | ✅ | ❌ PRO | 불채택 — 로케일·키보드 포커스·하이드레이션·막대 색·레이아웃 추가 작업 (스파이크) |
+| `dhtmlx-gantt` v10 Community | **MIT** | 없음(바닐라) | 2026-09 | ✅ 이동·기간 | ✅ 4종·끌어서 연결 | ❌ PRO | ✅ **채택 (D9)** — 스파이크 결과 `docs/spike-gantt-libraries.md` |
 | `frappe-gantt` | MIT | 없음(바닐라) | 2026-02 | ✅ | ✅ 화살표 | ❌ | 예비 — 가장 가벼움, 주말 제외 지원 |
 | `react-modern-gantt` | MIT | 17·18·19 | 2026-05 | — | — | — | 보류 — v0.9(1.0 이전) |
 | `@wamra/gantt-task-react` | MIT | ≥18 | 2024-11 | — | — | — | 보류 — 갱신 정체 |
@@ -333,7 +334,7 @@ plan                                  plan
 | **D6** | AI 호출 시점 | **보류** | 결정 전까지 결정적 감지 규칙만 구현 |
 | D7 | 간트 구현 | ✅ **결정** | 오픈소스 라이브러리 → §7.1 후보 중 D9로 선택 |
 | D8 | "완료" 상태 표현 | ✅ **결정** | `plans.status`에 `completed` 추가 — 사용자가 명시적으로 완료 처리 |
-| **D9** | 간트 라이브러리 최종 선택 | **권장안 제시 — 결정 대기** | 스파이크 결과(`docs/spike-gantt-libraries.md`): **DHTMLX Community 권장**. SVAR는 JS가 약 94 kB 가볍지만 로케일·키보드 포커스·하이드레이션·막대 색·레이아웃에서 추가 작업 필요. 오늘 선·Undo·일정 미정·근무 달력은 양쪽 모두 유료라 직접 구현 |
+| D9 | 간트 라이브러리 최종 선택 | ✅ **결정 — DHTMLX Community** | 스파이크 결과(`docs/spike-gantt-libraries.md`): **DHTMLX Community 권장**. SVAR는 JS가 약 94 kB 가볍지만 로케일·키보드 포커스·하이드레이션·막대 색·레이아웃에서 추가 작업 필요. 오늘 선·Undo·일정 미정·근무 달력은 양쪽 모두 유료라 직접 구현 |
 
 ---
 
