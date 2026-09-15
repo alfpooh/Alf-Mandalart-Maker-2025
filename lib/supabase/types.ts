@@ -42,6 +42,9 @@ export interface Database {
           archived_at: string | null
           pinned: boolean
           last_activity_at: string
+          schedule_mode: string
+          time_zone: string | null
+          tracking_started_at: string | null
         }
         Insert: {
           id?: string
@@ -65,6 +68,9 @@ export interface Database {
           archived_at: string | null
           pinned: boolean
           last_activity_at: string
+          schedule_mode: string
+          time_zone: string
+          tracking_started_at: string
         }>
         Relationships: []
       }
@@ -87,6 +93,11 @@ export interface Database {
           progress: number
           updated_at: string
           confirmed: boolean
+          start_date: string | null
+          estimate_days: number | null
+          date_locked: boolean
+          todo_rank: number | null
+          completed_at: string | null
         }
         Insert: {
           id?: string
@@ -170,6 +181,11 @@ export interface Database {
       save_plan_content: {
         /** `p_payload` is a PlanPayload from lib/plan-sync.ts. */
         Args: { p_plan_id: string; p_payload: unknown }
+        Returns: string
+      }
+      update_plan_actions: {
+        /** `p_changes` is an ActionChange[] from lib/schedule.ts. */
+        Args: { p_plan_id: string; p_changes: unknown }
         Returns: string
       }
     }

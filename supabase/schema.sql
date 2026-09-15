@@ -497,3 +497,113 @@ $$;
 
 revoke all on function public.save_plan_content(uuid, jsonb) from public, anon;
 grant execute on function public.save_plan_content(uuid, jsonb) to authenticated, service_role;
+
+-- ===========================================================================
+-- Planning at the action level (PRD D1 = (b), §12.1): dates, to-do order,
+-- completion time, and per-plan schedule settings.
+--
+-- save_plan_content never names these columns, so editing a plan's text
+-- leaves every date and the to-do order alone. They are written only through
+-- update_plan_actions below.
+-- ===========================================================================
+
+alter table public.actions add column if not exists start_date    date;
+alter table public.actions add column if not exists estimate_days smallint;
+-- A date a person chose. Automatic scheduling moves everything else around it.
+alter table public.actions add column if not exists date_locked   boolean not null default false;
+alter table public.actions add column if not exists todo_rank     integer;
+alter table public.actions add column if not exists completed_at  timestamptz;
+
+alter table public.actions drop constraint if exists actions_estimate_days_check;
+alter table public.actions add constraint actions_estimate_days_check
+  check (estimate_days is null or estimate_days between 1 and 365);
+
+alter table public.plans add column if not exists schedule_mode       text not null default 'calendar';
+alter table public.plans add column if not exists time_zone           text;
+alter table public.plans add column if not exists tracking_started_at timestamptz;
+
+alter table public.plans drop constraint if exists plans_schedule_mode_check;
+alter table public.plans add constraint plans_schedule_mode_check
+  check (schedule_mode in ('calendar', 'workdays'));
+
+-- Actions already at 100% have no completion time; when they were last updated
+-- is the closest record there is. Only fills blanks, so a second run changes
+-- nothing.
+update public.actions set completed_at = updated_at where progress = 100 and completed_at is null;
+
+create index if not exists actions_plan_rank_idx on public.actions (plan_id, todo_rank);
+
+/** Keeps completed_at in step with progress, whatever writes progress. */
+create or replace function public.stamp_action_completion()
+returns trigger language plpgsql as $$
+begin
+  if new.progress = 100 then
+    if tg_op = 'INSERT' or old.progress is distinct from 100 then
+      new.completed_at = coalesce(new.completed_at, now());
+    end if;
+  else
+    new.completed_at = null;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists actions_completion on public.actions;
+create trigger actions_completion before insert or update of progress on public.actions
+  for each row execute function public.stamp_action_completion();
+
+/**
+ * Applies schedule, order and completion changes to a plan's actions at once.
+ *
+ * One call per thing a person does — a Gantt drag that also moves the actions
+ * after it, an automatic schedule being applied, a reordered to-do list — so
+ * either all of it lands or none of it does. A key that is absent leaves that
+ * column alone; a key present with null clears it.
+ *
+ * SECURITY INVOKER: row level security decides whose plan this is.
+ *
+ * p_changes: [{ id, startDate?, estimateDays?, dueDate?, dateLocked?, todoRank?, progress? }]
+ */
+create or replace function public.update_plan_actions(p_plan_id uuid, p_changes jsonb)
+returns timestamptz language plpgsql security invoker set search_path = public as $$
+declare
+  saved_at timestamptz := now();
+  change   jsonb;
+  touched  integer;
+begin
+  if coalesce(jsonb_typeof(p_changes), '') <> 'array' then
+    raise exception 'changes must be an array' using errcode = '22023';
+  end if;
+  if jsonb_array_length(p_changes) > 64 then
+    raise exception 'at most 64 changes at once' using errcode = '22023';
+  end if;
+
+  perform 1 from public.plans where id = p_plan_id for update;
+  if not found then
+    raise exception 'plan % not found', p_plan_id using errcode = 'P0002';
+  end if;
+
+  for change in select value from jsonb_array_elements(p_changes) loop
+    update public.actions a set
+      start_date    = case when change ? 'startDate'    then (change->>'startDate')::date        else a.start_date end,
+      estimate_days = case when change ? 'estimateDays' then (change->>'estimateDays')::smallint else a.estimate_days end,
+      due_date      = case when change ? 'dueDate'      then (change->>'dueDate')::date          else a.due_date end,
+      date_locked   = case when change ? 'dateLocked'   then coalesce((change->>'dateLocked')::boolean, false) else a.date_locked end,
+      todo_rank     = case when change ? 'todoRank'     then (change->>'todoRank')::integer      else a.todo_rank end,
+      progress      = case when change ? 'progress'     then (change->>'progress')::smallint     else a.progress end
+    where a.id = (change->>'id')::uuid
+      and a.plan_id = p_plan_id;
+
+    get diagnostics touched = row_count;
+    if touched <> 1 then
+      raise exception 'action % is not in plan %', change->>'id', p_plan_id using errcode = '22023';
+    end if;
+  end loop;
+
+  update public.plans set last_activity_at = saved_at where id = p_plan_id;
+  return saved_at;
+end;
+$$;
+
+revoke all on function public.update_plan_actions(uuid, jsonb) from public, anon;
+grant execute on function public.update_plan_actions(uuid, jsonb) to authenticated, service_role;

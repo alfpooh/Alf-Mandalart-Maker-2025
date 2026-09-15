@@ -69,6 +69,18 @@ SQL editor. This round adds:
   plan with the moment it was added. The dashboard already allows for this, so
   running it is tidying up rather than urgent
 
+For planning (PRD phase 3) it also adds:
+
+- on `actions`: `start_date`, `estimate_days` (1–365), `date_locked`,
+  `todo_rank`, `completed_at` — the editor's save never touches these
+- on `plans`: `schedule_mode` (`calendar` or `workdays`), `time_zone`,
+  `tracking_started_at`
+- a trigger that stamps `completed_at` when an action reaches 100% and clears
+  it when it drops back, and a one-off fill for actions already at 100%
+- `update_plan_actions(plan_id, changes)`: dates, estimates, locks, to-do order
+  and progress for several actions in one transaction — all of it or none.
+  Callable by signed-in users (row level security applies), not by `anon`
+
 Until it is run, the app keeps working and plans stay in the browser; a
 signed-in user sees a notice that the database needs an update.
 
