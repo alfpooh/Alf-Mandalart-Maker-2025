@@ -443,6 +443,91 @@ export function applyChanges(actions: PlannedAction[], changes: ActionChange[], 
 }
 
 // ---------------------------------------------------------------------------
+// Editing the schedule table (FR-2.1, 2.3, 2.4, 3.6)
+// ---------------------------------------------------------------------------
+
+export type ScheduleField = "startDate" | "estimateDays" | "dueDate" | "dateLocked"
+
+/**
+ * What a person typed into one cell of the schedule table, as a change.
+ *
+ * A start date typed by a person is fixed on the spot: it is their date, and
+ * automatic scheduling must not move it (FR-2.3). Clearing it releases the
+ * lock too. A value equal to what is already stored is no change at all, so
+ * tabbing through a row never locks anything by accident.
+ */
+export function fieldChange(
+  action: PlannedAction,
+  field: ScheduleField,
+  raw: string | boolean,
+): { ok: true; change: ActionChange } | { ok: false; reason: "date" | "estimate" } {
+  const id = action.id
+  if (field === "dateLocked") return { ok: true, change: { id, dateLocked: raw === true } }
+
+  const value = String(raw).trim()
+  switch (field) {
+    case "startDate":
+      if (value === (action.startDate ?? "")) return { ok: true, change: { id } }
+      if (value === "") return { ok: true, change: { id, startDate: null, dateLocked: false } }
+      if (!isDateString(value)) return { ok: false, reason: "date" }
+      return { ok: true, change: { id, startDate: value, dateLocked: true } }
+    case "dueDate":
+      if (value === (action.dueDate ?? "")) return { ok: true, change: { id } }
+      if (value === "") return { ok: true, change: { id, dueDate: null } }
+      if (!isDateString(value)) return { ok: false, reason: "date" }
+      return { ok: true, change: { id, dueDate: value } }
+    case "estimateDays": {
+      if (value === String(action.estimateDays ?? "")) return { ok: true, change: { id } }
+      if (value === "") return { ok: true, change: { id, estimateDays: null } }
+      const days = /^\d+$/.test(value) ? Number(value) : Number.NaN
+      if (!(days >= 1 && days <= MAX_ESTIMATE_DAYS)) return { ok: false, reason: "estimate" }
+      return { ok: true, change: { id, estimateDays: days } }
+    }
+  }
+}
+
+const CHANGE_FIELDS = ["startDate", "estimateDays", "dueDate", "dateLocked", "todoRank", "progress"] as const
+
+/** True when applying the change would leave the action exactly as it is. */
+export function isNoop(action: PlannedAction, change: ActionChange): boolean {
+  return CHANGE_FIELDS.every((key) => !(key in change) || change[key] === action[key])
+}
+
+/** The change that puts back what `change` is about to overwrite. */
+export function undoFor(action: PlannedAction, change: ActionChange): ActionChange {
+  const undo: Record<string, unknown> = { id: action.id }
+  for (const key of CHANGE_FIELDS) if (key in change) undo[key] = action[key]
+  return undo as unknown as ActionChange
+}
+
+/** What the schedule table flags about one action. */
+export type ScheduleIssue =
+  | { kind: "unscheduled" }
+  /** A fixed date that overlaps unfinished prerequisites (FR-2.4). */
+  | { kind: "conflict"; ids: string[] }
+  | { kind: "unknownPrerequisite"; ids: string[] }
+  | { kind: "endsAfterDue"; days: number }
+  /** Automatic scheduling would start it on this day instead. */
+  | { kind: "moves"; start: string }
+
+/** Kinds that need a person's attention, as opposed to information. */
+export const ATTENTION_ISSUES: readonly ScheduleIssue["kind"][] = ["conflict", "unknownPrerequisite", "endsAfterDue"]
+
+export function scheduleIssues(action: PlannedAction, entry: ScheduleEntry | undefined): ScheduleIssue[] {
+  if (isComplete(action.progress)) return []
+  if (!entry?.slot) return [{ kind: "unscheduled" }]
+
+  const issues: ScheduleIssue[] = []
+  if (entry.conflicts.length > 0) issues.push({ kind: "conflict", ids: entry.conflicts })
+  if (entry.unknownPrerequisites.length > 0) issues.push({ kind: "unknownPrerequisite", ids: entry.unknownPrerequisites })
+  if (action.dueDate !== null && entry.slot.end > action.dueDate) {
+    issues.push({ kind: "endsAfterDue", days: daysBetween(action.dueDate, entry.slot.end) })
+  }
+  if (!action.dateLocked && entry.slot.start !== action.startDate) issues.push({ kind: "moves", start: entry.slot.start })
+  return issues
+}
+
+// ---------------------------------------------------------------------------
 // Prerequisites (FR-1.7)
 // ---------------------------------------------------------------------------
 

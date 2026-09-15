@@ -15,11 +15,13 @@ import {
 } from "@dnd-kit/core"
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable"
 
+import { ScheduleTable } from "@/components/planning/schedule-table"
 import { TodoRow } from "@/components/planning/todo-row"
 import { useLanguage } from "@/lib/language-context"
 import {
   addPrerequisite,
   removePrerequisite,
+  setScheduleSettings,
   startTracking,
   updatePlanActions,
   type PlanSchedule,
@@ -37,6 +39,7 @@ import {
   todayIn,
   wouldCreateCycle,
   type ActionChange,
+  type ScheduleMode,
   type TodoItem,
   type TodoView,
 } from "@/lib/schedule"
@@ -79,6 +82,13 @@ export function PlanningScreen({ planId, initial }: { planId: string; initial: S
   const [due, setDue] = useState<DueFilter>("any")
   const [notice, setNotice] = useState<Notice | null>(null)
   const [saving, setSaving] = useState(false)
+  const [tab, setTab] = useState<"todo" | "schedule">("todo")
+  const [resetKey, setResetKey] = useState(0)
+  // The plan as it is now. An Undo button runs later than the render that made
+  // it, and reading `schedule` there sees the plan from before the change it
+  // is meant to reverse — so a mode undo thought nothing had changed.
+  const current = useRef(schedule)
+  current.current = schedule
   // Progress each action had before it was ticked in this visit, so un-ticking restores it.
   const beforeDone = useRef(new Map<string, ProgressValue>())
 
@@ -163,13 +173,14 @@ export function PlanningScreen({ planId, initial }: { planId: string; initial: S
 
   const apply = async (changes: ActionChange[], message: string, undo?: ActionChange[]): Promise<boolean> => {
     if (changes.length === 0) return true
-    const before = schedule
+    const before = current.current
     setSchedule((current) => current && { ...current, actions: applyChanges(current.actions, changes, new Date().toISOString()) })
     setSaving(true)
     const result = await settled(updatePlanActions(planId, changes))
     setSaving(false)
     if (!result.ok) {
       setSchedule(before)
+      setResetKey((key) => key + 1)
       setNotice({ tone: "error", text: t(result.error) })
       return false
     }
@@ -219,7 +230,8 @@ export function PlanningScreen({ planId, initial }: { planId: string; initial: S
   }
 
   const addEdge = async (actionId: string, dependsOnId: string, silent = false) => {
-    if (wouldCreateCycle(schedule.dependencies, actionId, dependsOnId)) {
+    const edges = current.current?.dependencies ?? []
+    if (wouldCreateCycle(edges, actionId, dependsOnId)) {
       setNotice({ tone: "error", text: t("schedule.error.cycle") })
       return
     }
@@ -231,7 +243,8 @@ export function PlanningScreen({ planId, initial }: { planId: string; initial: S
       return
     }
     const edge: ActionDependency = { actionId, dependsOnId, rationale: "", confidence: 1, userEdited: true }
-    setDependencies([...schedule.dependencies.filter((e) => !(e.actionId === actionId && e.dependsOnId === dependsOnId)), edge])
+    const latest = current.current?.dependencies ?? []
+    setDependencies([...latest.filter((e) => !(e.actionId === actionId && e.dependsOnId === dependsOnId)), edge])
     // `silent` is the undo of a removal: say it was undone, but offer no undo of the undo.
     setNotice(
       silent
@@ -248,7 +261,8 @@ export function PlanningScreen({ planId, initial }: { planId: string; initial: S
       setNotice({ tone: "error", text: t(result.error) })
       return
     }
-    setDependencies(schedule.dependencies.filter((e) => !(e.actionId === actionId && e.dependsOnId === dependsOnId)))
+    const latest = current.current?.dependencies ?? []
+    setDependencies(latest.filter((e) => !(e.actionId === actionId && e.dependsOnId === dependsOnId)))
     setNotice(
       silent
         ? { tone: "success", text: t("planning.done.undone") }
@@ -261,6 +275,25 @@ export function PlanningScreen({ planId, initial }: { planId: string; initial: S
     return schedule.actions
       .filter((a) => a.id !== actionId && !existing.has(a.id) && !wouldCreateCycle(schedule.dependencies, actionId, a.id))
       .map((a) => ({ id: a.id, label: `${t("planning.item.area", { n: a.area })} · ${a.content}` }))
+  }
+
+  const changeMode = async (mode: ScheduleMode, undoing = false) => {
+    const previous = current.current?.scheduleMode
+    if (!previous || mode === previous) return
+    setSchedule((current) => current && { ...current, scheduleMode: mode })
+    setSaving(true)
+    const result = await settled(setScheduleSettings(planId, { mode }))
+    setSaving(false)
+    if (!result.ok) {
+      setSchedule((current) => current && { ...current, scheduleMode: previous })
+      setNotice({ tone: "error", text: t(result.error) })
+      return
+    }
+    setNotice(
+      undoing
+        ? { tone: "success", text: t("planning.done.undone") }
+        : { tone: "success", text: t("planning.schedule.done.mode"), undo: () => void changeMode(previous, true) },
+    )
   }
 
   // ---- keyboard and screen reader announcements -------------------------------
@@ -334,6 +367,49 @@ export function PlanningScreen({ planId, initial }: { planId: string; initial: S
           )}
         </div>
 
+        <div
+          role="group"
+          aria-label={t("planning.tabs.label")}
+          className="mt-6 flex w-fit gap-1 border-b border-gray-300"
+        >
+          {(["todo", "schedule"] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={tab === key}
+              onClick={() => setTab(key)}
+              className={`-mb-px min-h-[44px] border-b-2 px-4 text-sm font-semibold ${FOCUS} ${
+                tab === key ? "border-gray-900 text-gray-900" : "border-transparent text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              {t(`planning.tabs.${key}`)}
+            </button>
+          ))}
+        </div>
+
+        {tab === "schedule" ? (
+          today && entries ? (
+            <ScheduleTable
+              schedule={schedule}
+              entries={entries}
+              today={today}
+              timeZone={schedule.timeZone ?? browserZone()}
+              names={names}
+              saving={saving}
+              resetKey={resetKey}
+              onApply={apply}
+              onModeChange={(mode) => void changeMode(mode)}
+              onError={(text) => {
+                // A refused value must not stay in the box looking saved.
+                setResetKey((key) => key + 1)
+                setNotice({ tone: "error", text })
+              }}
+            />
+          ) : (
+            <div className="mt-6 h-40 animate-pulse rounded-lg bg-white/60 motion-reduce:animate-none" aria-busy="true" />
+          )
+        ) : (
+          <>
         <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div
             role="group"
@@ -419,6 +495,8 @@ export function PlanningScreen({ planId, initial }: { planId: string; initial: S
               </ol>
             </SortableContext>
           </DndContext>
+        )}
+          </>
         )}
       </main>
     </div>

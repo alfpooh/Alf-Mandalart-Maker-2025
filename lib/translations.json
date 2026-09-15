@@ -474,6 +474,64 @@
         "over": "{position}번째 위치로 옮기는 중입니다.",
         "end": "{action}을(를) {position}번째에 놓았습니다.",
         "cancel": "취소했습니다. {action}은(는) 원래 자리에 있습니다."
+      },
+      "tabs": {
+        "label": "계획 보기",
+        "todo": "할 일",
+        "schedule": "일정표"
+      },
+      "schedule": {
+        "mode": "기준",
+        "calendar": "달력일",
+        "workdays": "근무일 (주말 제외)",
+        "today": "오늘 {date} · {zone}",
+        "filter": {
+          "label": "표시",
+          "all": "전체",
+          "unscheduled": "일정 미정",
+          "issues": "확인 필요"
+        },
+        "caption": "액션별 일정입니다. 시작일을 직접 입력하면 그 날짜는 고정되어 자동 배치가 옮기지 않습니다.",
+        "col": {
+          "action": "액션",
+          "start": "시작일",
+          "estimate": "기간(일)",
+          "end": "종료",
+          "due": "마감",
+          "lock": "고정",
+          "notes": "메모"
+        },
+        "label": {
+          "start": "{action} 시작일",
+          "estimate": "{action} 기간(일)",
+          "due": "{action} 마감",
+          "lock": "{action} 날짜 고정"
+        },
+        "issue": {
+          "unscheduled": "기간을 넣으면 일정이 잡힙니다",
+          "conflict": "선행과 겹침: {names}",
+          "unknown": "선행 일정 미정: {names}",
+          "endsAfterDue": "마감보다 {days}일 늦게 끝남",
+          "moves": "자동 배치 시 {date} 시작"
+        },
+        "auto": {
+          "preview": "자동 배치 미리보기",
+          "title": "{n}개 액션의 시작일이 바뀝니다",
+          "none": "바꿀 시작일이 없습니다. 고정된 날짜와 완료한 액션은 옮기지 않습니다.",
+          "change": "{action}: {from} → {to}",
+          "noDate": "없음",
+          "apply": "적용",
+          "cancel": "닫기"
+        },
+        "empty": "이 조건에 맞는 액션이 없습니다.",
+        "done": {
+          "saved": "일정을 저장했습니다",
+          "applied": "{n}개 시작일을 바꿨습니다",
+          "mode": "계산 기준을 바꿨습니다"
+        },
+        "error": {
+          "estimate": "기간은 1~365 사이의 정수로 입력하세요."
+        }
       }
     }
   },
@@ -952,6 +1010,64 @@
         "over": "Moving to position {position}.",
         "end": "Dropped {action} at position {position}.",
         "cancel": "Cancelled. {action} is back where it was."
+      },
+      "tabs": {
+        "label": "Plan views",
+        "todo": "To-do",
+        "schedule": "Schedule"
+      },
+      "schedule": {
+        "mode": "Count",
+        "calendar": "Calendar days",
+        "workdays": "Working days (no weekends)",
+        "today": "Today {date} · {zone}",
+        "filter": {
+          "label": "Show",
+          "all": "All",
+          "unscheduled": "Not scheduled",
+          "issues": "Needs attention"
+        },
+        "caption": "Dates for each action. A start date you type is fixed, and automatic scheduling won't move it.",
+        "col": {
+          "action": "Action",
+          "start": "Start",
+          "estimate": "Days",
+          "end": "Ends",
+          "due": "Deadline",
+          "lock": "Fixed",
+          "notes": "Notes"
+        },
+        "label": {
+          "start": "Start date for {action}",
+          "estimate": "Days for {action}",
+          "due": "Deadline for {action}",
+          "lock": "Fix the date for {action}"
+        },
+        "issue": {
+          "unscheduled": "Add days to schedule it",
+          "conflict": "Overlaps its prerequisite: {names}",
+          "unknown": "Prerequisite not scheduled: {names}",
+          "endsAfterDue": "Ends {days} days after the deadline",
+          "moves": "Automatic scheduling starts it {date}"
+        },
+        "auto": {
+          "preview": "Preview automatic schedule",
+          "title": "Start dates change for {n} actions",
+          "none": "No start dates to change. Fixed dates and finished actions are never moved.",
+          "change": "{action}: {from} → {to}",
+          "noDate": "none",
+          "apply": "Apply",
+          "cancel": "Close"
+        },
+        "empty": "No actions match.",
+        "done": {
+          "saved": "Schedule saved",
+          "applied": "Moved {n} start dates",
+          "mode": "Day counting changed"
+        },
+        "error": {
+          "estimate": "Enter a whole number of days from 1 to 365."
+        }
       }
     }
   },
@@ -1430,6 +1546,64 @@
         "over": "Siirretään paikkaan {position}.",
         "end": "Pudotettu: {action} paikkaan {position}.",
         "cancel": "Peruttu. {action} on alkuperäisellä paikallaan."
+      },
+      "tabs": {
+        "label": "Suunnitelman näkymät",
+        "todo": "Tehtävät",
+        "schedule": "Aikataulu"
+      },
+      "schedule": {
+        "mode": "Laskentatapa",
+        "calendar": "Kalenteripäivät",
+        "workdays": "Arkipäivät (ei viikonloppuja)",
+        "today": "Tänään {date} · {zone}",
+        "filter": {
+          "label": "Näytä",
+          "all": "Kaikki",
+          "unscheduled": "Aikatauluttamattomat",
+          "issues": "Vaatii huomiota"
+        },
+        "caption": "Toimenpiteiden päivät. Itse syöttämäsi alkupäivä lukitaan, eikä automaattinen aikataulutus siirrä sitä.",
+        "col": {
+          "action": "Toimenpide",
+          "start": "Alku",
+          "estimate": "Päivät",
+          "end": "Loppuu",
+          "due": "Määräaika",
+          "lock": "Lukittu",
+          "notes": "Huomiot"
+        },
+        "label": {
+          "start": "Alkupäivä: {action}",
+          "estimate": "Päivät: {action}",
+          "due": "Määräaika: {action}",
+          "lock": "Lukitse päivä: {action}"
+        },
+        "issue": {
+          "unscheduled": "Lisää päivät aikataulutusta varten",
+          "conflict": "Päällekkäin edeltävän kanssa: {names}",
+          "unknown": "Edeltävä aikatauluttamatta: {names}",
+          "endsAfterDue": "Päättyy {days} päivää määräajan jälkeen",
+          "moves": "Automaattinen aikataulutus aloittaa {date}"
+        },
+        "auto": {
+          "preview": "Esikatsele automaattista aikataulua",
+          "title": "Alkupäivä muuttuu {n} toimenpiteelle",
+          "none": "Muutettavia alkupäiviä ei ole. Lukittuja päiviä ja valmiita toimenpiteitä ei siirretä.",
+          "change": "{action}: {from} → {to}",
+          "noDate": "ei päivää",
+          "apply": "Käytä",
+          "cancel": "Sulje"
+        },
+        "empty": "Ei vastaavia toimenpiteitä.",
+        "done": {
+          "saved": "Aikataulu tallennettu",
+          "applied": "Siirretty {n} alkupäivää",
+          "mode": "Laskentatapa vaihdettu"
+        },
+        "error": {
+          "estimate": "Anna päivät kokonaislukuna 1–365."
+        }
       }
     }
   }
