@@ -1,5 +1,6 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { ArrowLeft } from "lucide-react"
@@ -56,6 +57,22 @@ const NOTICE_MS = 6_000
 
 type DueFilter = "any" | "has" | "overdue"
 type Notice = { tone: "success" | "error"; text: string; undo?: () => void }
+type Tab = "todo" | "schedule" | "gantt"
+const TABS: readonly Tab[] = ["todo", "schedule", "gantt"]
+
+function GanttLoading({ error }: { error?: Error | null }) {
+  const { t } = useLanguage()
+  return error ? (
+    <p className="mt-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{t("planning.gantt.loadFailed")}</p>
+  ) : (
+    <div className="mt-6 h-40 animate-pulse rounded-lg bg-white/60 motion-reduce:animate-none" aria-busy="true">
+      <span className="sr-only">{t("planning.gantt.loading")}</span>
+    </div>
+  )
+}
+
+// The chart library is large and only this tab uses it, so it loads when the tab opens.
+const GanttView = dynamic(() => import("@/components/planning/gantt-view"), { ssr: false, loading: GanttLoading })
 
 function browserZone(): string {
   try {
@@ -82,7 +99,7 @@ export function PlanningScreen({ planId, initial }: { planId: string; initial: S
   const [due, setDue] = useState<DueFilter>("any")
   const [notice, setNotice] = useState<Notice | null>(null)
   const [saving, setSaving] = useState(false)
-  const [tab, setTab] = useState<"todo" | "schedule">("todo")
+  const [tab, setTab] = useState<Tab>("todo")
   const [resetKey, setResetKey] = useState(0)
   // The plan as it is now. An Undo button runs later than the render that made
   // it, and reading `schedule` there sees the plan from before the change it
@@ -372,7 +389,7 @@ export function PlanningScreen({ planId, initial }: { planId: string; initial: S
           aria-label={t("planning.tabs.label")}
           className="mt-6 flex w-fit gap-1 border-b border-gray-300"
         >
-          {(["todo", "schedule"] as const).map((key) => (
+          {TABS.map((key) => (
             <button
               key={key}
               type="button"
@@ -387,7 +404,28 @@ export function PlanningScreen({ planId, initial }: { planId: string; initial: S
           ))}
         </div>
 
-        {tab === "schedule" ? (
+        {tab === "gantt" ? (
+          today && entries ? (
+            <GanttView
+              schedule={schedule}
+              entries={entries}
+              today={today}
+              names={names}
+              saving={saving}
+              resetKey={resetKey}
+              onApply={apply}
+              onAddPrerequisite={(actionId, dependsOnId) => void addEdge(actionId, dependsOnId)}
+              onRemovePrerequisite={(actionId, dependsOnId) => void removeEdge(actionId, dependsOnId)}
+              onError={(text) => {
+                setResetKey((key) => key + 1)
+                setNotice({ tone: "error", text })
+              }}
+              onOpenSchedule={() => setTab("schedule")}
+            />
+          ) : (
+            <div className="mt-6 h-40 animate-pulse rounded-lg bg-white/60 motion-reduce:animate-none" aria-busy="true" />
+          )
+        ) : tab === "schedule" ? (
           today && entries ? (
             <ScheduleTable
               schedule={schedule}

@@ -1,0 +1,67 @@
+/*
+ * The Gantt chart in the planner's colours. Loaded with the chart only.
+ * Every rule is scoped to .mandalart-gantt; the library's own classes are global.
+ */
+
+.mandalart-gantt {
+  --gantt-today: rgba(234, 179, 8, 0.18);
+  --gantt-weekend: #f5f6f8;
+  --gantt-focus: #111827;
+}
+
+.mandalart-gantt .gantt_container,
+.mandalart-gantt .gantt_grid,
+.mandalart-gantt .gantt_task,
+.mandalart-gantt .gantt_tooltip {
+  font-family: inherit;
+}
+
+.mandalart-gantt .area-1 { --gantt-solid: var(--area-1); --gantt-soft: var(--area-1-soft); --gantt-ink: var(--area-1-ink); }
+.mandalart-gantt .area-2 { --gantt-solid: var(--area-2); --gantt-soft: var(--area-2-soft); --gantt-ink: var(--area-2-ink); }
+.mandalart-gantt .area-3 { --gantt-solid: var(--area-3); --gantt-soft: var(--area-3-soft); --gantt-ink: var(--area-3-ink); }
+.mandalart-gantt .area-4 { --gantt-solid: var(--area-4); --gantt-soft: var(--area-4-soft); --gantt-ink: var(--area-4-ink); }
+.mandalart-gantt .area-5 { --gantt-solid: var(--area-5); --gantt-soft: var(--area-5-soft); --gantt-ink: var(--area-5-ink); }
+.mandalart-gantt .area-6 { --gantt-solid: var(--area-6); --gantt-soft: var(--area-6-soft); --gantt-ink: var(--area-6-ink); }
+.mandalart-gantt .area-7 { --gantt-solid: var(--area-7); --gantt-soft: var(--area-7-soft); --gantt-ink: var(--area-7-ink); }
+.mandalart-gantt .area-8 { --gantt-solid: var(--area-8); --gantt-soft: var(--area-8-soft); --gantt-ink: var(--area-8-ink); }
+
+/* Timeline background: weekends lighter, today shaded in the header and every row. */
+.mandalart-gantt .gantt_task_cell.is-weekend { background: var(--gantt-weekend); }
+.mandalart-gantt .gantt_task_cell.is-today,
+.mandalart-gantt .gantt_scale_cell.is-today { background: var(--gantt-today); }
+.mandalart-gantt .gantt_scale_cell.is-today { color: #111827; font-weight: 700; }
+
+/* Action bars in their area's colour; progress as a darker fill inside. */
+.mandalart-gantt .gantt_task_line {
+  background: var(--gantt-solid);
+  border-color: var(--gantt-ink);
+  border-radius: 4px;
+}
+.mandalart-gantt .gantt_task_line .gantt_task_progress { background: rgba(0, 0, 0, 0.28); }
+.mandalart-gantt .gantt_task_line .gantt_task_content { color: #fff; font-size: 12px; }
+.mandalart-gantt .gantt_task_line.is-locked { box-shadow: inset 4px 0 0 var(--gantt-ink); }
+.mandalart-gantt .gantt_task_line.is-done { opacity: 0.5; }
+
+/* Area rows: a thin band spanning their actions, and a tinted grid row. */
+.mandalart-gantt .gantt_task_line.gantt_project {
+  background: var(--gantt-soft);
+  border: 1px solid var(--gantt-solid);
+}
+.mandalart-gantt .gantt_task_line.gantt_project .gantt_task_progress_wrapper { display: none; }
+.mandalart-gantt .gantt_row.area-row,
+.mandalart-gantt .gantt_row.area-row.odd {
+  background: var(--gantt-soft);
+  color: var(--gantt-ink);
+  font-weight: 600;
+}
+
+.mandalart-gantt .gantt_task_line.gantt_selected { box-shadow: 0 0 0 2px var(--gantt-focus); }
+.mandalart-gantt .gantt_task_line.is-locked.gantt_selected { box-shadow: inset 4px 0 0 var(--gantt-ink), 0 0 0 2px var(--gantt-focus); }
+
+.mandalart-gantt :focus-visible,
+.mandalart-gantt .gantt_focused {
+  outline: 2px solid var(--gantt-focus);
+  outline-offset: -2px;
+}
+
+.gantt_tooltip .gantt-tip-title { font-weight: 600; }

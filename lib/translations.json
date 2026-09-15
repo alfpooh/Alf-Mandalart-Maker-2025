@@ -478,7 +478,8 @@
       "tabs": {
         "label": "계획 보기",
         "todo": "할 일",
-        "schedule": "일정표"
+        "schedule": "일정표",
+        "gantt": "간트 차트"
       },
       "schedule": {
         "mode": "기준",
@@ -531,6 +532,65 @@
         },
         "error": {
           "estimate": "기간은 1~365 사이의 정수로 입력하세요."
+        }
+      },
+      "gantt": {
+        "label": "간트 차트",
+        "zoom": {
+          "label": "눈금",
+          "day": "일",
+          "week": "주",
+          "month": "월"
+        },
+        "hint": "막대를 끌면 시작일이 바뀌고 고정됩니다. 막대 끝을 끌면 기간이, 막대 안의 손잡이를 끌면 진행률이 바뀝니다. 막대 옆의 점을 다른 막대로 끌면 선행 관계가 생기고, 연결선을 두 번 누르면 지울 수 있습니다.",
+        "keyboard": "키보드로는 일정표에서 같은 내용을 바꿀 수 있습니다.",
+        "openSchedule": "일정표 열기",
+        "narrow": "간트 차트는 넓은 화면에 맞춰져 있습니다. 좁은 화면에서는 일정표가 더 편합니다.",
+        "showAnyway": "그래도 차트 보기",
+        "loading": "차트를 불러오는 중입니다",
+        "loadFailed": "차트를 불러오지 못했습니다. 일정표에서 같은 날짜를 볼 수 있습니다.",
+        "empty": "아직 날짜가 잡힌 액션이 없습니다. 일정표에서 기간을 넣으면 차트에 나타납니다.",
+        "legend": {
+          "locked": "왼쪽 띠: 날짜 고정",
+          "done": "흐린 막대: 완료",
+          "today": "음영 열: 오늘"
+        },
+        "col": {
+          "action": "액션",
+          "start": "시작",
+          "days": "기간"
+        },
+        "tip": {
+          "range": "{start} ~ {end}",
+          "days": "{days}일",
+          "progress": "진행률 {progress}%",
+          "locked": "날짜 고정",
+          "done": "완료"
+        },
+        "unscheduled": {
+          "title": "일정 미정 {n}개",
+          "hint": "기간을 넣으면 차트에 나타납니다."
+        },
+        "follow": {
+          "title": "뒤따르는 액션 {n}개의 시작일도 바뀝니다",
+          "body": "함께 밀기는 새 시작일을 저장하고, 그대로 두기는 원래 날짜에 고정합니다(선행과 겹침으로 표시됩니다).",
+          "push": "함께 밀기",
+          "keep": "그대로 두기",
+          "change": "{action}: {from} → {to}"
+        },
+        "conflict": "선행 액션과 겹칩니다: {names}",
+        "link": {
+          "remove": "선행 관계를 지울까요? {from} → {to}",
+          "confirm": "지우기",
+          "cancel": "취소",
+          "direction": "선행 관계는 앞 액션의 끝에서 뒤 액션의 시작으로만 이을 수 있습니다."
+        },
+        "done": {
+          "moved": "{action} 시작일을 {date}로 옮기고 고정했습니다",
+          "resized": "{action} 기간을 {days}일로 바꿨습니다",
+          "progress": "{action} 진행률을 {progress}%로 바꿨습니다",
+          "pushed": "뒤따르는 액션 {n}개를 옮겼습니다",
+          "kept": "뒤따르는 액션 {n}개를 원래 날짜에 고정했습니다"
         }
       }
     }
@@ -1014,7 +1074,8 @@
       "tabs": {
         "label": "Plan views",
         "todo": "To-do",
-        "schedule": "Schedule"
+        "schedule": "Schedule",
+        "gantt": "Gantt chart"
       },
       "schedule": {
         "mode": "Count",
@@ -1067,6 +1128,65 @@
         },
         "error": {
           "estimate": "Enter a whole number of days from 1 to 365."
+        }
+      },
+      "gantt": {
+        "label": "Gantt chart",
+        "zoom": {
+          "label": "Scale",
+          "day": "Days",
+          "week": "Weeks",
+          "month": "Months"
+        },
+        "hint": "Drag a bar to move its start date and fix it. Drag a bar's end to change its length, or the handle inside it to change progress. Drag the dot beside a bar onto another bar to add a prerequisite; double-click a connecting line to remove it.",
+        "keyboard": "With a keyboard, the schedule table changes the same things.",
+        "openSchedule": "Open schedule",
+        "narrow": "The Gantt chart is made for wide screens. On a narrow screen the schedule table is easier.",
+        "showAnyway": "Show the chart anyway",
+        "loading": "Loading the chart",
+        "loadFailed": "The chart could not be loaded. The schedule table shows the same dates.",
+        "empty": "No action has dates yet. Add estimates in the schedule table and they appear here.",
+        "legend": {
+          "locked": "Left band: date fixed",
+          "done": "Faded bar: done",
+          "today": "Shaded column: today"
+        },
+        "col": {
+          "action": "Action",
+          "start": "Start",
+          "days": "Days"
+        },
+        "tip": {
+          "range": "{start} – {end}",
+          "days": "{days} days",
+          "progress": "{progress}% done",
+          "locked": "Date fixed",
+          "done": "Done"
+        },
+        "unscheduled": {
+          "title": "Not scheduled: {n}",
+          "hint": "Add an estimate and the action appears in the chart."
+        },
+        "follow": {
+          "title": "{n} following actions change start date",
+          "body": "Push them saves their new start dates. Keep them fixes them on their old dates, where they are marked as overlapping.",
+          "push": "Push them",
+          "keep": "Keep them",
+          "change": "{action}: {from} → {to}"
+        },
+        "conflict": "Overlaps a prerequisite: {names}",
+        "link": {
+          "remove": "Remove this prerequisite? {from} → {to}",
+          "confirm": "Remove",
+          "cancel": "Cancel",
+          "direction": "A prerequisite links the end of the earlier action to the start of the later one."
+        },
+        "done": {
+          "moved": "Moved {action} to {date} and fixed the date",
+          "resized": "{action} now takes {days} days",
+          "progress": "{action} is {progress}% done",
+          "pushed": "Moved {n} following actions",
+          "kept": "Fixed {n} following actions on their old dates"
         }
       }
     }
@@ -1550,7 +1670,8 @@
       "tabs": {
         "label": "Suunnitelman näkymät",
         "todo": "Tehtävät",
-        "schedule": "Aikataulu"
+        "schedule": "Aikataulu",
+        "gantt": "Gantt-kaavio"
       },
       "schedule": {
         "mode": "Laskentatapa",
@@ -1603,6 +1724,65 @@
         },
         "error": {
           "estimate": "Anna päivät kokonaislukuna 1–365."
+        }
+      },
+      "gantt": {
+        "label": "Gantt-kaavio",
+        "zoom": {
+          "label": "Asteikko",
+          "day": "Päivät",
+          "week": "Viikot",
+          "month": "Kuukaudet"
+        },
+        "hint": "Vedä palkkia siirtääksesi aloituspäivää; päivä lukitaan. Vedä palkin päästä muuttaaksesi kestoa tai palkin sisällä olevasta kahvasta muuttaaksesi edistymistä. Vedä palkin vieressä olevasta pisteestä toiseen palkkiin lisätäksesi edeltävän toimenpiteen; kaksoisnapsauta yhdysviivaa poistaaksesi sen.",
+        "keyboard": "Näppäimistöllä samat muutokset tehdään aikataulutaulukossa.",
+        "openSchedule": "Avaa aikataulu",
+        "narrow": "Gantt-kaavio on tehty leveälle näytölle. Kapealla näytöllä aikataulutaulukko on helpompi.",
+        "showAnyway": "Näytä kaavio silti",
+        "loading": "Kaaviota ladataan",
+        "loadFailed": "Kaaviota ei voitu ladata. Aikataulutaulukossa näkyvät samat päivät.",
+        "empty": "Millään toimenpiteellä ei ole vielä päiviä. Lisää kestot aikataulutaulukossa, niin ne näkyvät tässä.",
+        "legend": {
+          "locked": "Vasen raita: päivä lukittu",
+          "done": "Haalea palkki: valmis",
+          "today": "Varjostettu sarake: tänään"
+        },
+        "col": {
+          "action": "Toimenpide",
+          "start": "Alku",
+          "days": "Kesto"
+        },
+        "tip": {
+          "range": "{start} – {end}",
+          "days": "{days} pv",
+          "progress": "{progress} % valmis",
+          "locked": "Päivä lukittu",
+          "done": "Valmis"
+        },
+        "unscheduled": {
+          "title": "Aikatauluttamatta: {n}",
+          "hint": "Lisää kesto, niin toimenpide näkyy kaaviossa."
+        },
+        "follow": {
+          "title": "{n} seuraavan toimenpiteen aloituspäivä muuttuu",
+          "body": "Siirrä ne tallentaa uudet aloituspäivät. Pidä ennallaan lukitsee ne vanhoihin päiviin, jolloin ne merkitään päällekkäisiksi.",
+          "push": "Siirrä ne",
+          "keep": "Pidä ennallaan",
+          "change": "{action}: {from} → {to}"
+        },
+        "conflict": "Päällekkäin edeltävän kanssa: {names}",
+        "link": {
+          "remove": "Poistetaanko edeltävä toimenpide? {from} → {to}",
+          "confirm": "Poista",
+          "cancel": "Peruuta",
+          "direction": "Edeltävä toimenpide yhdistetään aiemman toimenpiteen lopusta myöhemmän alkuun."
+        },
+        "done": {
+          "moved": "{action} siirrettiin päivälle {date} ja päivä lukittiin",
+          "resized": "{action} kestää nyt {days} pv",
+          "progress": "{action}: {progress} % valmis",
+          "pushed": "{n} seuraavaa toimenpidettä siirrettiin",
+          "kept": "{n} seuraavaa toimenpidettä lukittiin vanhoihin päiviin"
         }
       }
     }
