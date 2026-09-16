@@ -166,7 +166,8 @@
       "claimFailed": "옮기지 못했습니다",
       "unconfigured": "계정 기능이 아직 설정되지 않았습니다",
       "failed": "로그인에 실패했습니다",
-      "required": "로그인이 필요합니다"
+      "required": "로그인이 필요합니다",
+      "expired": "로그인이 필요합니다. 로그인 시간이 지났을 수 있으니 다시 로그인해 주세요."
     },
     "quota": {
       "anonExhausted": "오늘 만들 수 있는 만다라트를 모두 사용했습니다. 계정을 만들면 이어서 만들 수 있고, 지금까지 만든 것도 저장됩니다.",
@@ -777,7 +778,8 @@
       "claimFailed": "Couldn't move it",
       "unconfigured": "Accounts are not set up yet",
       "failed": "Sign-in failed",
-      "required": "Sign in required"
+      "required": "Sign in required",
+      "expired": "Please sign in again — your session may have expired."
     },
     "quota": {
       "anonExhausted": "That's today's Mandalart. Create an account to keep going — and to keep the one you just made.",
@@ -1388,7 +1390,8 @@
       "claimFailed": "Siirto ei onnistunut",
       "unconfigured": "Tilejä ei ole vielä otettu käyttöön",
       "failed": "Kirjautuminen epäonnistui",
-      "required": "Kirjautuminen vaaditaan"
+      "required": "Kirjautuminen vaaditaan",
+      "expired": "Kirjaudu uudelleen – istuntosi on voinut vanhentua."
     },
     "quota": {
       "anonExhausted": "Tämän päivän Mandalart on käytetty. Luo tili jatkaaksesi — ja säilyttääksesi juuri tekemäsi.",

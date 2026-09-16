@@ -1,5 +1,6 @@
 import { cookies } from "next/headers"
 import { createServerClient } from "@supabase/ssr"
+import { isAuthRetryableFetchError, isAuthSessionMissingError, type User } from "@supabase/supabase-js"
 
 import {
   hasServiceRole,
@@ -58,11 +59,37 @@ export function getAdminClient() {
   )
 }
 
-/** The signed-in user, or null. */
-export async function getCurrentUser() {
+/**
+ * Whether this request is signed in — and, unlike a bare null, whether that
+ * could be checked at all.
+ *
+ * Any failed call to Supabase Auth used to read as "signed out", so a brief
+ * network error sent someone who was signed in back to the start page without
+ * a word. Why a session was not accepted is logged — error name, status and
+ * code only, never a token — so the next report can be traced.
+ */
+export type AuthState =
+  | { status: "signed-in"; user: User }
+  | { status: "signed-out" }
+  | { status: "unreachable" }
+
+export async function getAuthState(): Promise<AuthState> {
   const supabase = await getServerClient()
-  if (!supabase) return null
+  if (!supabase) return { status: "signed-out" }
   const { data, error } = await supabase.auth.getUser()
-  if (error) return null
-  return data.user
+  if (!error && data.user) return { status: "signed-in", user: data.user }
+  if (error && isAuthRetryableFetchError(error)) {
+    console.warn("[auth] could not reach Supabase Auth:", error.name, error.status)
+    return { status: "unreachable" }
+  }
+  if (error && !isAuthSessionMissingError(error)) {
+    console.warn("[auth] session not accepted:", error.name, error.status, error.code ?? "")
+  }
+  return { status: "signed-out" }
+}
+
+/** The signed-in user, or null — also when sign-in could not be checked. */
+export async function getCurrentUser() {
+  const auth = await getAuthState()
+  return auth.status === "signed-in" ? auth.user : null
 }
