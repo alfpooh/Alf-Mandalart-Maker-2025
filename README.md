@@ -234,6 +234,13 @@ Runs as a long-lived Node process — `npm ci && npm run build`, then
 platform that sets `PORT` and health-checks the port needs no extra config.
 Node is pinned in `engines` and `.node-version`.
 
+One deployment, on Render. The repository was connected to Vercel as well,
+and the difference is not cosmetic: a generation call is given 60–120 seconds
+here, far past a serverless function's limit, so entering a goal there ended
+in a platform error page while the same code finished on Render. The queue
+below also keeps its state in one process. `vercel.json` turns Vercel's
+automatic deployments off so a push cannot bring that copy back.
+
 Set every variable **before the first build**, not after. `getSession()`
 reads cookies only when Supabase is configured, so a build without those
 variables prerenders `/` as static and the account button is then missing
