@@ -271,3 +271,4 @@ All rights reserved © D.H. Alf Bae, 2025
 ---
 
 *Next.js · TypeScript · Tailwind · Gemini · Supabase*
+# -
